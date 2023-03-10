@@ -175,10 +175,10 @@ class SplitAC:
             newTemperature, float
         ):
             raise Exception("Wrong usage of method")
-        # Fixing temps if not given as multiplies of 10 less than 180
-        if newTemperature < 180:
+        # Fixing temps if not given as multiplies of 10 less than 160
+        if newTemperature < 160:
             newTemperature = newTemperature * 10
-        if newTemperature >= 180 and newTemperature <= 320:
+        if newTemperature >= 160 and newTemperature <= 320:
             self.adjust_temperature = newTemperature
         else:
             raise Exception("out of range temperature!!")
