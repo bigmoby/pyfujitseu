@@ -26,7 +26,7 @@ class SplitAC:
         self.adjust_temperature = self._properties
 
     # Method for getting new (refreshing) properties values
-    def refresh_properties(self):
+    def refresh_properties(self) -> None:
         self._properties = self._api._get_device_properties(self._dsn)
         self.device_name = self._properties
         self.adjust_temperature = self._properties
@@ -332,7 +332,7 @@ class SplitAC:
         return self._af_horizontal_swing
 
     @af_horizontal_swing.setter
-    def af_horizontal_swing(self, properties):
+    def af_horizontal_swing(self, properties: Any):
         if isinstance(properties, (list, tuple)):
             self._af_horizontal_swing = self._get_prop_from_json(
                 "af_horizontal_swing", properties
@@ -348,7 +348,7 @@ class SplitAC:
         return self._af_vertical_direction
 
     @af_vertical_direction.setter
-    def af_vertical_direction(self, properties):
+    def af_vertical_direction(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
             self._af_vertical_direction = self._get_prop_from_json(
                 "af_vertical_move_step1", properties
@@ -383,7 +383,7 @@ class SplitAC:
         return self._device_name
 
     @device_name.setter
-    def device_name(self, properties):
+    def device_name(self, properties: Any) -> None:
         self._device_name = self._get_prop_from_json("device_name", properties)
 
     @property
@@ -402,7 +402,7 @@ class SplitAC:
         return data
 
     # Get a property history
-    def _get_device_property_history(self, propertyCode):
+    def _get_device_property_history(self, propertyCode: int) -> Any:
         propertyHistory = self._api._get_device_property(propertyCode)
         propertyHistory = propertyHistory.json()
 
@@ -413,18 +413,16 @@ class SplitAC:
 
         DICT_OPERATION_MODE = {
             "off": 0,
-            "unknown": 1,
-            "auto": 2,
-            "cool": 3,
+            "heat": 1,
+            "cool": 2,
+            "auto": 3,
             "dry": 4,
             "fan_only": 5,
-            "heat": 6,
             0: "off",
-            1: "unknown",
-            2: "auto",
-            3: "cool",
+            1: "heat",
+            2: "cool",
+            3: "auto",
             4: "dry",
             5: "fan_only",
-            6: "heat",
         }
         return DICT_OPERATION_MODE[operation_mode]

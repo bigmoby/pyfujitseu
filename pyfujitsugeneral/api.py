@@ -92,7 +92,7 @@ class Api:
         )
         return response.json()
 
-    def _set_device_property(self, propertyCode, value):
+    def _set_device_property(self, propertyCode: int, value: Any) -> Response:
         access_token = self._read_token()
         if not self._check_token_validity(access_token):
             access_token = self._authenticate()
@@ -106,7 +106,7 @@ class Api:
 
         return response
 
-    def _get_device_property(self, propertyCode):
+    def _get_device_property(self, propertyCode) -> Response:
         access_token = self._read_token()
         if not self._check_token_validity(access_token):
             access_token = self._authenticate()
