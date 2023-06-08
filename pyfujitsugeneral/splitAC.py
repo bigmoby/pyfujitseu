@@ -227,22 +227,26 @@ class SplitAC:
         else:
             raise Exception("Wrong usage of the method!")
 
-    @property # property to get temperature in degree C
+    @property # property to get display temperature in degree C
     def display_temperature_degree(self) -> float | None:
         data = None
         if self._display_temperature is not None:
-            data = round(((self._display_temperature['value'] / 100 - 32) / 9 * 5),1)
+            data = round(((self._display_temperature["value"] / 100 - 32) / 9 * 5),1)
         return data
+    
+    @property # property returns display temperature dict in 10 times of degree C
+    def display_temperature(self): 
+        return self._display_temperature(self)
     
     @display_temperature.setter
     def display_temperature(self,properties):
         if isinstance(properties,(list, tuple)):
-            self._display_temperature = self._get_prop_from_json('display_temperature',properties)
+            self._display_temperature = self._get_prop_from_json("display_temperature",properties)
         elif isinstance(properties,int) or isinstance(properties,float):
-            self._api._set_device_property(self.display_temperature['key'],properties)
+            self._api._set_device_property(self.display_temperature["key"],properties)
             self.refresh_properties()
         else:
-            raise Exception('Wrong usage of the method!!')
+            raise Exception("Wrong usage of the method!")
             
     @property  # property to get temperature in degree C
     def adjust_temperature_degree(self) -> float | None:
