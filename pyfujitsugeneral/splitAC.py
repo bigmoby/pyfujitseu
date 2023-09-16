@@ -7,31 +7,18 @@ class SplitAC:
         self._dsn = dsn
         self._api = api_param  # Setting the API object
 
-        # Calling the api class _get_device_properties to get devices properties
-        self._properties = self._api._get_device_properties(self._dsn)
-
         # self.properties: For now this variable is not used but lots of device properties which are not implemented
         # this variable can be used to expose those properties and implement them.
-        self.device_name = self._properties
-        self.af_vertical_swing = self._properties
-        self.af_vertical_direction = self._properties
-        self.af_horizontal_swing = self._properties
-        self.af_horizontal_direction = self._properties
-        self.economy_mode = self._properties
-        self.fan_speed = self._properties
-        self.powerful_mode = self._properties
-        self.min_heat = self._properties
-        self.outdoor_low_noise = self._properties
-        self.operation_mode = self._properties  # type: ignore
-        self.adjust_temperature = self._properties
-        self.display_temperature = self._properties
-        self.outdoor_temperature = self._properties
+        self.update_properties()
 
     # Method for getting new (refreshing) properties values
     def refresh_properties(self) -> None:
+        self.update_properties()
+
+    # Calling the api class _get_device_properties to get devices properties
+    def update_properties(self) -> None:
         self._properties = self._api._get_device_properties(self._dsn)
         self.device_name = self._properties
-        self.adjust_temperature = self._properties
         self.af_vertical_swing = self._properties
         self.af_vertical_direction = self._properties
         self.af_horizontal_swing = self._properties
@@ -41,7 +28,8 @@ class SplitAC:
         self.powerful_mode = self._properties
         self.min_heat = self._properties
         self.outdoor_low_noise = self._properties
-        self.operation_mode = self._properties  # type: ignore
+        self.operation_mode = self._properties
+        self.adjust_temperature = self._properties
         self.display_temperature = self._properties
         self.outdoor_temperature = self._properties
 
@@ -419,7 +407,7 @@ class SplitAC:
             self._api._set_device_property(
                 self.af_vertical_direction["key"], properties
             )
-            # self.vertical_swing_off() ##If direction set then swing will be turned OFF
+            self.vertical_swing_off()  ##If direction set then swing will be turned OFF
             self.refresh_properties()
         else:
             raise Exception("Wrong usage of the method or direction out of range!")
@@ -470,17 +458,8 @@ class SplitAC:
 
         return propertyHistory
 
-        # Get a property history
-
-    def _get_device_property_display_temperature(self, propertyCode: int) -> Any:
-        updatedDisplayTemperatureProps = self._api._get_device_property(propertyCode)
-        updatedDisplayTemperature = updatedDisplayTemperatureProps.json()
-
-        return updatedDisplayTemperature
-
     # Translate the operation mode to descriptive values and reverse
     def _operation_mode_translate(self, operation_mode: Any) -> Any:
-
         DICT_OPERATION_MODE = {
             "off": 0,
             "heat": 1,
