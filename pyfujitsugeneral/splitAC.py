@@ -20,10 +20,12 @@ class SplitAC:
         self.economy_mode = self._properties
         self.fan_speed = self._properties
         self.powerful_mode = self._properties
-        self.min_heat = self._properties  # TODO Missing device setting method
-        self.outdoor_low_noise = self._properties  # TODO Missing device setting method
+        self.min_heat = self._properties
+        self.outdoor_low_noise = self._properties
         self.operation_mode = self._properties  # type: ignore
         self.adjust_temperature = self._properties
+        self.display_temperature = self._properties
+        self.outdoor_temperature = self._properties
 
     # Method for getting new (refreshing) properties values
     def refresh_properties(self) -> None:
@@ -40,6 +42,8 @@ class SplitAC:
         self.min_heat = self._properties
         self.outdoor_low_noise = self._properties
         self.operation_mode = self._properties  # type: ignore
+        self.display_temperature = self._properties
+        self.outdoor_temperature = self._properties
 
     # To Turn on the device get the last operation mode using property history method
     # Find the last not 'OFF'/'0' O.M.
@@ -76,7 +80,6 @@ class SplitAC:
     # Fan speed setting
     # Quiet Low Medium High Auto
     def changeFanSpeed(self, speed):
-        print(speed)
         if speed.upper() == "QUIET":
             self.fan_speed_quiet()
             return None
@@ -115,7 +118,6 @@ class SplitAC:
     # Fan Swing mode
     # 0: 'Horizontal',1: 'Down', 2: 'Unknown', 3: 'Swing'
     def changeSwingMode(self, mode):
-        print(mode)
         if mode.upper() == "HORIZONTAL":
             self.af_vertical_direction = 0
             return None
@@ -227,27 +229,52 @@ class SplitAC:
         else:
             raise Exception("Wrong usage of the method!")
 
-    @property # property to get display temperature in degree C
+    @property  # property to get display temperature in degree C
     def display_temperature_degree(self) -> float | None:
         data = None
         if self._display_temperature is not None:
-            data = round(((self._display_temperature["value"] / 100 - 32) / 9 * 5),1)
+            data = round(((self._display_temperature["value"] / 100 - 32) / 9 * 5), 1)
         return data
-    
-    @property # property returns display temperature dict in 10 times of degree C
-    def display_temperature(self): 
-        return self._display_temperature(self)
-    
+
+    @property  # property returns display temperature dict in 10 times of degree C
+    def display_temperature(self) -> dict[str, Any] | None:
+        return self._display_temperature
+
     @display_temperature.setter
-    def display_temperature(self,properties):
-        if isinstance(properties,(list, tuple)):
-            self._display_temperature = self._get_prop_from_json("display_temperature",properties)
-        elif isinstance(properties,int) or isinstance(properties,float):
-            self._api._set_device_property(self.display_temperature["key"],properties)
+    def display_temperature(self, properties: Any):
+        if isinstance(properties, (list, tuple)):
+            self._display_temperature = self._get_prop_from_json(
+                "display_temperature", properties
+            )
+        elif isinstance(properties, int) or isinstance(properties, float):
+            self._api._set_device_property(self.display_temperature["key"], properties)
             self.refresh_properties()
         else:
             raise Exception("Wrong usage of the method!")
-            
+
+    @property  # property to get outdoor temperature in degree C
+    def outdoor_temperature_degree(self) -> float | None:
+        data = None
+        if self._outdoor_temperature is not None:
+            data = round(((self._outdoor_temperature["value"] / 100 - 32) / 9 * 5), 1)
+        return data
+
+    @property  # property returns outdoor temperature dict in 10 times of degree C
+    def outdoor_temperature(self) -> dict[str, Any] | None:
+        return self._outdoor_temperature
+
+    @outdoor_temperature.setter
+    def outdoor_temperature(self, properties: Any):
+        if isinstance(properties, (list, tuple)):
+            self._outdoor_temperature = self._get_prop_from_json(
+                "outdoor_temperature", properties
+            )
+        elif isinstance(properties, int) or isinstance(properties, float):
+            self._api._set_device_property(self.outdoor_temperature["key"], properties)
+            self.refresh_properties()
+        else:
+            raise Exception("Wrong usage of the method!")
+
     @property  # property to get temperature in degree C
     def adjust_temperature_degree(self) -> float | None:
         data = None
@@ -316,6 +343,20 @@ class SplitAC:
             raise Exception("Wrong usage of the method!")
 
     @property
+    def min_heat(self):
+        return self._min_heat
+
+    @min_heat.setter
+    def min_heat(self, properties):
+        if isinstance(properties, (list, tuple)):
+            self._min_heat = self._get_prop_from_json("min_heat", properties)
+        elif isinstance(properties, int):
+            self._api._set_device_property(self.min_heat["key"], properties)
+            self.refresh_properties()
+        else:
+            raise Exception("Wrong usage of the method!")
+
+    @property
     def economy_mode(self):
         return self._economy_mode
 
@@ -372,7 +413,7 @@ class SplitAC:
     def af_vertical_direction(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
             self._af_vertical_direction = self._get_prop_from_json(
-                "af_vertical_move_step1", properties
+                "af_vertical_direction", properties
             )
         elif isinstance(properties, int):
             self._api._set_device_property(
@@ -428,6 +469,14 @@ class SplitAC:
         propertyHistory = propertyHistory.json()
 
         return propertyHistory
+
+        # Get a property history
+
+    def _get_device_property_display_temperature(self, propertyCode: int) -> Any:
+        updatedDisplayTemperatureProps = self._api._get_device_property(propertyCode)
+        updatedDisplayTemperature = updatedDisplayTemperatureProps.json()
+
+        return updatedDisplayTemperature
 
     # Translate the operation mode to descriptive values and reverse
     def _operation_mode_translate(self, operation_mode: Any) -> Any:

@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 from typing import Any
@@ -10,9 +9,6 @@ from requests import Response
 HEADER_CONTENT_TYPE = "Content-Type"
 HEADER_VALUE_CONTENT_TYPE = "application/json"
 HEADER_AUTHORIZATION = "Authorization"
-
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def _api_headers(access_token: str | None = None) -> dict[str, str]:
