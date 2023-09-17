@@ -512,11 +512,13 @@ class SplitAC:
             "auto": 3,
             "dry": 4,
             "fan_only": 5,
+            "heat_alt": 6,
             0: "off",
             1: "heat",
             2: "cool",
             3: "auto",
             4: "dry",
             5: "fan_only",
+            6: "heat",
         }
         return DICT_OPERATION_MODE[operation_mode]
