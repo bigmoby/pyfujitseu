@@ -180,28 +180,12 @@ class SplitAC:
     def vertical_swing_off(self):
         self.af_vertical_swing = 0
 
-    def vertical_direction(self, newDirection):
-        if not isinstance(newDirection, int):
-            raise Exception("Wrong usage of method")
-        if newDirection > 0 and newDirection < 8:
-            self.af_vertical_direction = newDirection
-        else:
-            raise Exception("Direction out of range 1 - 7!")
-
     # Horizontal
     def horizontal_swing_on(self):
         self.af_vertical_swing = 1
 
     def horizontal_swing_off(self):
         self.af_vertical_swing = 0
-
-    def horizontal_direction(self, newDirection):
-        if not isinstance(newDirection, int):
-            raise Exception("Wrong usage of method")
-        if newDirection > 0 and newDirection < 8:
-            self.af_horizontal_direction = newDirection
-        else:
-            raise Exception("Direction out of range 1 - 7!")
 
     # Temperature setting
     def changeTemperature(self, newTemperature):
