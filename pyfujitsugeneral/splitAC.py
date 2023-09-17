@@ -296,7 +296,17 @@ class SplitAC:
     def adjust_temperature_degree(self) -> float | None:
         data = None
         if self._adjust_temperature is not None:
-            data = round((self._adjust_temperature["value"] / 10), 1)
+            adjustTemperatureValue = self._adjust_temperature["value"]
+            if adjustTemperatureValue == 65535:
+                datapoints = self._get_device_property_history(
+                    self._adjust_temperature["key"]
+                )
+                # Get the latest setting other than invalid value
+                for datapoint in reversed(datapoints):
+                    if datapoint["datapoint"]["value"] != 65535:
+                        adjustTemperatureValue = int(datapoint["datapoint"]["value"])
+                        break
+            data = round((adjustTemperatureValue / 10), 1)
         return data
 
     @property  # property returns temperature dict in 10 times of degree C
