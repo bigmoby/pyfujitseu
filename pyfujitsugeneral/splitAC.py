@@ -157,7 +157,6 @@ class SplitAC:
 
     def vane_vertical_positions(self) -> list[str]:
         """Return available vertical vane positions."""
-        SWING_LIST_DICT.pop(0)
         return SWING_LIST_DICT
 
     def vane_vertical(self) -> str:
