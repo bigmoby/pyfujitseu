@@ -247,8 +247,18 @@ class SplitAC:
     @property  # property to get display temperature in degree C
     def display_temperature_degree(self) -> float | None:
         data = None
-        if self._display_temperature is not None:
-            data = round(((self._display_temperature["value"] / 100 - 32) / 9 * 5), 1)
+        if self._adjust_temperature is not None:
+            adjustTemperatureValue = self._adjust_temperature["value"]
+            if adjustTemperatureValue == 65535:
+                datapoints = self._get_device_property_history(
+                    self._adjust_temperature["key"]
+                )
+                # Get the latest setting other than invalid value
+                for datapoint in reversed(datapoints):
+                    if datapoint["datapoint"]["value"] != 65535:
+                        adjustTemperatureValue = int(datapoint["datapoint"]["value"])
+                        break
+            data = round((adjustTemperatureValue / 10), 1)
         return data
 
     @property  # property returns display temperature dict in 10 times of degree C
