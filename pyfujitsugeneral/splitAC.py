@@ -1,6 +1,31 @@
 from .api import Api
 from typing import Any
 
+V_VANE_POSITION_UNKNOWN = "unknown"
+V_VANE_POSITION_1 = "1_up"
+V_VANE_POSITION_2 = "2"
+V_VANE_POSITION_3 = "3"
+V_VANE_POSITION_4 = "4_down"
+V_VANE_POSITION_SWING = "swing"
+
+SWING_LIST_DICT = [
+    V_VANE_POSITION_UNKNOWN,
+    V_VANE_POSITION_1,
+    V_VANE_POSITION_2,
+    V_VANE_POSITION_3,
+    V_VANE_POSITION_4,
+    V_VANE_POSITION_SWING,
+]
+
+_V_VANE_POSITION_LOOKUP = {
+    0: V_VANE_POSITION_UNKNOWN,
+    1: V_VANE_POSITION_1,
+    2: V_VANE_POSITION_2,
+    3: V_VANE_POSITION_3,
+    4: V_VANE_POSITION_4,
+    5: V_VANE_POSITION_SWING,
+}
+
 
 class SplitAC:
     def __init__(self, dsn: str, api_param: Api) -> None:
@@ -103,30 +128,50 @@ class SplitAC:
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
         return FAN_SPEED_DICT[self.fan_speed["value"]]
 
-    # Fan Swing mode
-    # 0: 'Horizontal',1: 'Down', 2: 'Unknown', 3: 'Swing'
-    def changeSwingMode(self, mode):
-        if mode.upper() == "HORIZONTAL":
-            self.af_vertical_direction = 0
-            return None
-        if mode.upper() == "DOWN":
+    # Vane vertical mode
+    def changeSwingMode(self, mode) -> None:
+        if mode.upper() == V_VANE_POSITION_1.upper():
             self.af_vertical_direction = 1
-            return None
-        if mode.upper() == "UNKNOWN":
+            self.af_vertical_swing = 0
+            self.af_horizontal_swing = 0
+        elif mode.upper() == V_VANE_POSITION_2.upper():
             self.af_vertical_direction = 2
-            return None
-        if mode.upper() == "SWING":
+            self.af_vertical_swing = 0
+            self.af_horizontal_swing = 0
+        elif mode.upper() == V_VANE_POSITION_3.upper():
             self.af_vertical_direction = 3
-            return None
+            self.af_vertical_swing = 0
+            self.af_horizontal_swing = 0
+        elif mode.upper() == V_VANE_POSITION_4.upper():
+            self.af_vertical_direction = 4
+            self.af_vertical_swing = 0
+            self.af_horizontal_swing = 0
+        elif mode.upper() == V_VANE_POSITION_SWING.upper():
+            self.af_vertical_swing = 1
+            self.af_horizontal_swing = 1
 
     def get_swing_mode_desc(self):
-        SWING_LIST_DICT = {0: "Horizontal", 1: "Down", 2: "Unknown", 3: "Swing"}
         try:
             return SWING_LIST_DICT[self.af_vertical_direction["value"]]
         except TypeError:
-            return SWING_LIST_DICT[2]
+            return SWING_LIST_DICT[0]
 
-    # Direction Settings
+    def vane_vertical_positions(self) -> list[str]:
+        """Return available vertical vane positions."""
+        SWING_LIST_DICT.pop(0)
+        return SWING_LIST_DICT
+
+    def vane_vertical(self) -> str:
+        """Return vertical vane position."""
+        verticalDirectionValue = self.af_vertical_direction["value"]
+        verticalSwingValue = self.af_vertical_swing["value"]
+        horizontalSwingValue = self.af_horizontal_swing["value"]
+        if verticalSwingValue == 1 or horizontalSwingValue == 1:
+            return V_VANE_POSITION_SWING
+        else:
+            return _V_VANE_POSITION_LOOKUP.get(
+                verticalDirectionValue, V_VANE_POSITION_UNKNOWN
+            )
 
     # Vertical
     def vertical_swing_on(self):
