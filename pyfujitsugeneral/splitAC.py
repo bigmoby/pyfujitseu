@@ -114,7 +114,7 @@ class SplitAC:
 
     def vane_vertical_positions(self) -> list[str]:
         """Return available vertical vane positions."""
-        array = np.arange(1, self.af_vertical_num_dir["value"])
+        array = np.arange(1, self.af_vertical_num_dir["value"] + 1)
         return list(array)
 
     def vane_vertical(self) -> str:
@@ -138,7 +138,7 @@ class SplitAC:
 
     def vane_horizontal_positions(self) -> list[str]:
         """Return available horizontal vane positions."""
-        array = np.arange(1, self.af_horizontal_num_dir["value"])
+        array = np.arange(1, self.af_horizontal_num_dir["value"] + 1)
         return list(array)
 
     def vane_horizontal(self) -> str:
