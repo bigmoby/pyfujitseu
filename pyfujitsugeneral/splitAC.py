@@ -105,6 +105,15 @@ class SplitAC:
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
         return FAN_SPEED_DICT[self.fan_speed["value"]]
 
+    def get_swing_modes_supported(self):
+        SWING_DICT = {0: "None", 1: "Vertical", 2: "Horizontal", 3: "Both"}
+        key = 0
+        if self.af_vertical_direction["value"] is not None:
+            key = key | 1
+        if self.af_horizontal_direction["value"] is not None:
+            key = key | 2
+        return SWING_DICT[key]
+
     # Vertical
     def vertical_swing_on(self):
         self.af_vertical_swing = 1
