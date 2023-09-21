@@ -21,5 +21,5 @@ setup(
     keywords=["Fujitsu General air conditioners"],
     packages=["pyfujitsugeneral"],
     include_package_data=True,
-    install_requires=["requests", "certifi", "chardet", "idna", "urllib3"],
+    install_requires=["requests", "certifi", "chardet", "idna", "urllib3", "numpy"],
 )

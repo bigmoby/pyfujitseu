@@ -1,6 +1,7 @@
-import numpy as np
 from .api import Api
 from typing import Any
+import numpy as np
+
 
 class SplitAC:
     def __init__(self, dsn: str, api_param: Api) -> None:
@@ -391,7 +392,7 @@ class SplitAC:
         self._af_horizontal_num_dir = self._get_prop_from_json(
             "af_horizontal_num_dir", properties
         )
-        
+
     @property
     def af_horizontal_direction(self):
         return self._af_horizontal_direction
