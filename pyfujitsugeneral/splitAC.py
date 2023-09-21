@@ -1,30 +1,6 @@
+import numpy as np
 from .api import Api
 from typing import Any
-
-V_VANE_POSITION_UNKNOWN = "unknown"
-V_VANE_POSITION_1 = "1_up"
-V_VANE_POSITION_2 = "2"
-V_VANE_POSITION_3 = "3"
-V_VANE_POSITION_4 = "4_down"
-V_VANE_POSITION_SWING = "swing"
-
-SWING_LIST_DICT = [
-    V_VANE_POSITION_1,
-    V_VANE_POSITION_2,
-    V_VANE_POSITION_3,
-    V_VANE_POSITION_4,
-    V_VANE_POSITION_SWING,
-]
-
-_V_VANE_POSITION_LOOKUP = {
-    0: V_VANE_POSITION_UNKNOWN,
-    1: V_VANE_POSITION_1,
-    2: V_VANE_POSITION_2,
-    3: V_VANE_POSITION_3,
-    4: V_VANE_POSITION_4,
-    5: V_VANE_POSITION_SWING,
-}
-
 
 class SplitAC:
     def __init__(self, dsn: str, api_param: Api) -> None:
@@ -45,8 +21,10 @@ class SplitAC:
         self.device_name = self._properties
         self.af_vertical_swing = self._properties
         self.af_vertical_direction = self._properties
+        self.af_vertical_num_dir = self._properties
         self.af_horizontal_swing = self._properties
         self.af_horizontal_direction = self._properties
+        self.af_horizontal_num_dir = self._properties
         self.economy_mode = self._properties
         self.fan_speed = self._properties
         self.powerful_mode = self._properties
@@ -127,49 +105,14 @@ class SplitAC:
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
         return FAN_SPEED_DICT[self.fan_speed["value"]]
 
-    # Vane vertical mode
-    def changeSwingMode(self, mode) -> None:
-        if mode.upper() == V_VANE_POSITION_1.upper():
-            self.af_vertical_direction = 1
-            self.af_vertical_swing = 0
-            self.af_horizontal_swing = 0
-        elif mode.upper() == V_VANE_POSITION_2.upper():
-            self.af_vertical_direction = 2
-            self.af_vertical_swing = 0
-            self.af_horizontal_swing = 0
-        elif mode.upper() == V_VANE_POSITION_3.upper():
-            self.af_vertical_direction = 3
-            self.af_vertical_swing = 0
-            self.af_horizontal_swing = 0
-        elif mode.upper() == V_VANE_POSITION_4.upper():
-            self.af_vertical_direction = 4
-            self.af_vertical_swing = 0
-            self.af_horizontal_swing = 0
-        elif mode.upper() == V_VANE_POSITION_SWING.upper():
-            self.af_vertical_swing = 1
-            self.af_horizontal_swing = 1
-
-    def get_swing_mode_desc(self):
-        try:
-            return SWING_LIST_DICT[self.af_vertical_direction["value"]]
-        except TypeError:
-            return SWING_LIST_DICT[0]
-
-    def vane_vertical_positions(self) -> list[str]:
-        """Return available vertical vane positions."""
-        return SWING_LIST_DICT
-
-    def vane_vertical(self) -> str:
-        """Return vertical vane position."""
-        verticalDirectionValue = self.af_vertical_direction["value"]
-        verticalSwingValue = self.af_vertical_swing["value"]
-        horizontalSwingValue = self.af_horizontal_swing["value"]
-        if verticalSwingValue == 1 or horizontalSwingValue == 1:
-            return V_VANE_POSITION_SWING
-        else:
-            return _V_VANE_POSITION_LOOKUP.get(
-                verticalDirectionValue, V_VANE_POSITION_UNKNOWN
-            )
+    def get_swing_modes_supported(self):
+        SWING_DICT = {0: "None", 1: "Vertical", 2: "Horizontal", 3: "Both"}
+        key = 0
+        if self.af_vertical_direction["value"] is not None:
+            key = key | 1
+        if self.af_horizontal_direction["value"] is not None:
+            key = key | 2
+        return SWING_DICT[key]
 
     # Vertical
     def vertical_swing_on(self):
@@ -178,12 +121,46 @@ class SplitAC:
     def vertical_swing_off(self):
         self.af_vertical_swing = 0
 
+    def vane_vertical_positions(self) -> list[str]:
+        """Return available vertical vane positions."""
+        array = np.arange(1, self.af_vertical_num_dir["value"] + 1)
+        return list(array)
+
+    def vane_vertical(self) -> str:
+        """Return vertical vane position."""
+        return self.af_vertical_direction["value"]
+
+    def set_vane_vertical_position(self, pos: int) -> str:
+        """Set vertical vane position."""
+        if pos >= 1 and pos <= self.af_vertical_num_dir["value"]:
+            self.af_vertical_swing = 0
+            self.af_vertical_direction = pos
+        else:
+            raise Exception("Vane position not supported")
+
     # Horizontal
     def horizontal_swing_on(self):
-        self.af_vertical_swing = 1
+        self.af_horizontal_swing = 1
 
     def horizontal_swing_off(self):
-        self.af_vertical_swing = 0
+        self.af_horizontal_swing = 0
+
+    def vane_horizontal_positions(self) -> list[str]:
+        """Return available horizontal vane positions."""
+        array = np.arange(1, self.af_horizontal_num_dir["value"] + 1)
+        return list(array)
+
+    def vane_horizontal(self) -> str:
+        """Return horizontal vane position."""
+        return self.af_horizontal_direction["value"]
+
+    def set_vane_horizontal_position(self, pos: int) -> str:
+        """Set horizontal vane position."""
+        if pos >= 1 and pos <= self.af_horizontal_num_dir["value"]:
+            self.af_horizontal_swing = 0
+            self.af_horizontal_direction = pos
+        else:
+            raise Exception("Vane position not supported")
 
     # Temperature setting
     def changeTemperature(self, newTemperature):
@@ -406,6 +383,16 @@ class SplitAC:
             raise Exception("Wrong usage of the method!")
 
     @property
+    def af_horizontal_num_dir(self) -> int | None:
+        return self._af_horizontal_num_dir
+
+    @af_horizontal_num_dir.setter
+    def af_horizontal_num_dir(self, properties) -> int | None:
+        self._af_horizontal_num_dir = self._get_prop_from_json(
+            "af_horizontal_num_dir", properties
+        )
+        
+    @property
     def af_horizontal_direction(self):
         return self._af_horizontal_direction
 
@@ -439,6 +426,16 @@ class SplitAC:
             self.refresh_properties()
         else:
             raise Exception("Wrong usage of the method!")
+
+    @property
+    def af_vertical_num_dir(self) -> int | None:
+        return self._af_vertical_num_dir
+
+    @af_vertical_num_dir.setter
+    def af_vertical_num_dir(self, properties) -> int | None:
+        self._af_vertical_num_dir = self._get_prop_from_json(
+            "af_vertical_num_dir", properties
+        )
 
     @property
     def af_vertical_direction(self):
