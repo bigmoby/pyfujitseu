@@ -507,14 +507,14 @@ class SplitAC:
     def _operation_mode_translate(self, operation_mode: Any) -> Any:
         DICT_OPERATION_MODE = {
             "off": 0,
-            "heat": 6,
+            "unknown": 1,
             "auto": 2,
             "cool": 3,
             "dry": 4,
             "fan_only": 5,
-            "heat_alt": 6,
+            "heat": 6,
             0: "off",
-            1: "heat",
+            1: "unknown",
             2: "auto",
             3: "cool",
             4: "dry",
