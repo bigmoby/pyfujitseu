@@ -1,234 +1,263 @@
-from .api import Api
 from typing import Any
+
+import logging
 import numpy as np
+
+from .client import FGLairApiClient
+from .exceptions import FGLairMethodException, FGLairGeneralException
+
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def get_prop_from_json(property_name: str, properties: Any) -> dict[str, Any]:
+    data = {}
+    for property_item in properties:
+        if property_item["property"]["name"] == property_name:
+            data = {
+                "value": property_item["property"]["value"],
+                "key": property_item["property"]["key"],
+            }
+    return data
 
 
 class SplitAC:
-    def __init__(self, dsn: str, api_param: Api) -> None:
+    def __init__(
+        self,
+        dsn: str,
+        client: FGLairApiClient,
+        tokenpath: str,
+        temperature_offset: float,
+    ) -> None:
         self._dsn = dsn
-        self._api = api_param  # Setting the API object
+        self._client = client  # Setting the API object
+        self._tokenpath = tokenpath
+        self._temperature_offset = temperature_offset
+        self.set_properties(None)
+        self._device_name: dict[str, str] = {}
+        self._af_vertical_swing: dict[str, bool] = {}
+        self._af_vertical_direction: dict[str, int] = {}
+        self._af_vertical_num_dir: dict[str, int] = {}
+        self._af_horizontal_swing: dict[str, bool] = {}
+        self._af_horizontal_direction: dict[str, int] = {}
+        self._af_horizontal_num_dir: dict[str, int] = {}
+        self._economy_mode: dict[str, bool] = {}
+        self._fan_speed: dict[str, int] = {}
+        self._powerful_mode: dict[str, bool] = {}
+        self._min_heat: dict[str, bool] = {}
+        self._outdoor_low_noise: dict[str, bool] = {}
+        self._operation_mode: dict[str, int] = {}
+        self._adjust_temperature: dict[str, int] = {}
+        self._display_temperature: dict[str, int] = {}
+        self._outdoor_temperature: dict[str, int] = {}
 
         # self.properties: For now this variable is not used but lots of device properties which are not implemented
         # this variable can be used to expose those properties and implement them.
-        self.update_properties()
+        # self.async_update_properties()
 
     # Method for getting new (refreshing) properties values
-    def refresh_properties(self) -> None:
-        self.update_properties()
-
-    # Calling the api class _get_device_properties to get devices properties
-    def update_properties(self) -> None:
-        self._properties = self._api._get_device_properties(self._dsn)
-        self.device_name = self._properties
-        self.af_vertical_swing = self._properties
-        self.af_vertical_direction = self._properties
-        self.af_vertical_num_dir = self._properties
-        self.af_horizontal_swing = self._properties
-        self.af_horizontal_direction = self._properties
-        self.af_horizontal_num_dir = self._properties
-        self.economy_mode = self._properties
-        self.fan_speed = self._properties
-        self.powerful_mode = self._properties
-        self.min_heat = self._properties
-        self.outdoor_low_noise = self._properties
-        self.operation_mode = self._properties
-        self.adjust_temperature = self._properties
-        self.display_temperature = self._properties
-        self.outdoor_temperature = self._properties
+    async def async_update_properties(self) -> Any:
+        self.set_properties(await self._client.async_get_device_properties(self._dsn))
+        self.set_device_name(self.get_properties())
+        await self.async_set_af_vertical_swing(self.get_properties())
+        await self.async_set_af_vertical_direction(self.get_properties())
+        self.set_af_vertical_num_dir(self.get_properties())
+        await self.async_set_af_horizontal_swing(self.get_properties())
+        await self.async_set_af_horizontal_direction(self.get_properties())
+        self.set_af_horizontal_num_dir(self.get_properties())
+        await self.async_set_economy_mode(self.get_properties())
+        await self.async_set_fan_speed(self.get_properties())
+        await self.async_set_powerful_mode(self.get_properties())
+        await self.async_set_min_heat(self.get_properties())
+        await self.async_set_outdoor_low_noise(self.get_properties())
+        await self.async_set_operation_mode(self.get_properties())
+        await self.async_set_adjust_temperature(self.get_properties())
+        await self.async_set_display_temperature(self.get_properties())
+        await self.async_set_outdoor_temperature(self.get_properties())
+        return self.get_properties()
 
     # To Turn on the device get the last operation mode using property history method
     # Find the last not 'OFF'/'0' O.M.
     # Turn on by setting O.M. to the last O.M
-    def turnOn(self):
-        datapoints = self._get_device_property_history(self.operation_mode["key"])
+    async def async_turnOn(self) -> None:
+        datapoints = await self._async_get_device_property_history(
+            self.get_operation_mode()["key"]
+        )
         # Get the latest setting before turn off
         for datapoint in reversed(datapoints):
             if datapoint["datapoint"]["value"] != 0:
                 last_operation_mode = int(datapoint["datapoint"]["value"])
                 break
 
-        self.operation_mode = last_operation_mode  # type: ignore
-        self.refresh_properties()
+        await self.async_set_operation_mode(last_operation_mode)
+        await self.async_update_properties()
 
-    def turnOff(self):
-        self.operation_mode = 0  # type: ignore
-        self.refresh_properties()
+    async def async_turnOff(self) -> None:
+        await self.async_set_operation_mode(0)
+        await self.async_update_properties()
 
     # Economy mode setting
-    def economy_mode_on(self):
-        self.economy_mode = 1
+    async def async_economy_mode_on(self) -> None:
+        await self.async_set_economy_mode(1)
 
-    def economy_mode_off(self):
-        self.economy_mode = 0
+    async def async_economy_mode_off(self) -> None:
+        await self.async_set_economy_mode(0)
 
     # Powerfull mode setting
-    def powerfull_mode_on(self):
-        self.powerful_mode = 1
+    async def async_powerfull_mode_on(self) -> None:
+        await self.async_set_powerful_mode(1)
 
-    def powerfull_mode_off(self):
-        self.powerful_mode = 0
+    async def async_powerfull_mode_off(self) -> None:
+        await self.async_set_powerful_mode(0)
 
     # Fan speed setting
     # Quiet Low Medium High Auto
-    def changeFanSpeed(self, speed):
+    async def async_changeFanSpeed(self, speed: str) -> None:
         if speed.upper() == "QUIET":
-            self.fan_speed_quiet()
+            await self.async_fan_speed_quiet()
             return None
         if speed.upper() == "LOW":
-            self.fan_speed_low()
+            await self.async_fan_speed_low()
             return None
         if speed.upper() == "MEDIUM":
-            self.fan_speed_medium()
+            await self.async_fan_speed_medium()
             return None
         if speed.upper() == "HIGH":
-            self.fan_speed_high()
+            await self.async_fan_speed_high()
             return None
         if speed.upper() == "AUTO":
-            self.fan_speed_auto()
+            await self.async_fan_speed_auto()
             return None
 
-    def fan_speed_quiet(self):
-        self.fan_speed = 0
+    async def async_fan_speed_quiet(self) -> None:
+        await self.async_set_fan_speed(0)
 
-    def fan_speed_low(self):
-        self.fan_speed = 1
+    async def async_fan_speed_low(self) -> None:
+        await self.async_set_fan_speed(1)
 
-    def fan_speed_medium(self):
-        self.fan_speed = 2
+    async def async_fan_speed_medium(self) -> None:
+        await self.async_set_fan_speed(2)
 
-    def fan_speed_high(self):
-        self.fan_speed = 3
+    async def async_fan_speed_high(self) -> None:
+        await self.async_set_fan_speed(3)
 
-    def fan_speed_auto(self):
-        self.fan_speed = 4
+    async def async_fan_speed_auto(self) -> None:
+        await self.async_set_fan_speed(4)
 
-    def get_fan_speed_desc(self):
+    def get_fan_speed_desc(self) -> str:
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
-        return FAN_SPEED_DICT[self.fan_speed["value"]]
+        return FAN_SPEED_DICT[self.get_fan_speed()["value"]]
 
-    def get_swing_modes_supported(self):
+    def get_swing_modes_supported(self) -> str:
         SWING_DICT = {0: "None", 1: "Vertical", 2: "Horizontal", 3: "Both"}
         key = 0
-        if self.af_vertical_direction["value"] is not None:
+        if self.get_af_vertical_direction()["value"] is not None:
             key = key | 1
-        if self.af_horizontal_direction["value"] is not None:
+        if self.get_af_horizontal_direction()["value"] is not None:
             key = key | 2
         return SWING_DICT[key]
 
     # Vertical
-    def vertical_swing_on(self):
-        self.af_vertical_swing = 1
+    async def async_vertical_swing_on(self) -> None:
+        await self.async_set_af_vertical_swing(1)
 
-    def vertical_swing_off(self):
-        self.af_vertical_swing = 0
+    async def async_vertical_swing_off(self) -> None:
+        await self.async_set_af_vertical_swing(0)
 
     def vane_vertical_positions(self) -> list[str]:
         """Return available vertical vane positions."""
-        array = np.arange(1, self.af_vertical_num_dir["value"] + 1)
+        array = np.arange(1, self.get_af_vertical_num_dir()["value"] + 1)
         return list(array)
 
-    def vane_vertical(self) -> str:
+    def vane_vertical(self) -> int:
         """Return vertical vane position."""
-        return self.af_vertical_direction["value"]
+        return self.get_af_vertical_direction()["value"]
 
-    def set_vane_vertical_position(self, pos: int) -> str:
+    async def async_set_vane_vertical_position(self, pos: int) -> None:
         """Set vertical vane position."""
-        if pos >= 1 and pos <= self.af_vertical_num_dir["value"]:
-            self.af_vertical_swing = 0
-            self.af_vertical_direction = pos
+        if pos >= 1 and pos <= self.get_af_vertical_num_dir()["value"]:
+            await self.async_set_af_vertical_swing(0)
+            await self.async_set_af_vertical_direction(pos)
         else:
-            raise Exception("Vane position not supported")
+            raise FGLairGeneralException("Vane position not supported")
 
     # Horizontal
-    def horizontal_swing_on(self):
-        self.af_horizontal_swing = 1
+    async def async_horizontal_swing_on(self) -> None:
+        await self.async_set_af_horizontal_swing(1)
 
-    def horizontal_swing_off(self):
-        self.af_horizontal_swing = 0
+    async def async_horizontal_swing_off(self) -> None:
+        await self.async_set_af_horizontal_swing(0)
 
     def vane_horizontal_positions(self) -> list[str]:
         """Return available horizontal vane positions."""
-        array = np.arange(1, self.af_horizontal_num_dir["value"] + 1)
+        array = np.arange(1, self.get_af_horizontal_num_dir()["value"] + 1)
         return list(array)
 
-    def vane_horizontal(self) -> str:
+    def vane_horizontal(self) -> int:
         """Return horizontal vane position."""
-        return self.af_horizontal_direction["value"]
+        return self.get_af_horizontal_direction()["value"]
 
-    def set_vane_horizontal_position(self, pos: int) -> str:
+    async def async_set_vane_horizontal_position(self, pos: int) -> None:
         """Set horizontal vane position."""
-        if pos >= 1 and pos <= self.af_horizontal_num_dir["value"]:
-            self.af_horizontal_swing = 0
-            self.af_horizontal_direction = pos
+        if pos >= 1 and pos <= self.get_af_horizontal_num_dir()["value"]:
+            await self.async_set_af_horizontal_swing(0)
+            await self.async_set_af_horizontal_direction(pos)
         else:
-            raise Exception("Vane position not supported")
+            raise FGLairGeneralException("Vane position not supported")
 
     # Temperature setting
-    def changeTemperature(self, newTemperature):
+    async def async_changeTemperature(self, newTemperature: int | float) -> None:
         # set temperature for degree C
         if not isinstance(newTemperature, int) and not isinstance(
             newTemperature, float
         ):
-            raise Exception("Wrong usage of method")
+            raise FGLairMethodException("Wrong usage of method")
         # Fixing temps if not given as multiplies of 10 less than 160
         if newTemperature < 160:
             newTemperature = newTemperature * 10
         if newTemperature >= 160 and newTemperature <= 320:
-            self.adjust_temperature = newTemperature
+            await self.async_set_adjust_temperature(newTemperature)
         else:
-            raise Exception("out of range temperature!!")
+            raise FGLairGeneralException("temperature out of range!")
 
     # Operation Mode setting
-    def changeOperationMode(self, operationMode):
-        if not isinstance(operationMode, int):
-            operationMode = self._operation_mode_translate(operationMode)
-        self.operation_mode = operationMode  # type: ignore
+    async def async_changeOperationMode(self, operation_mode: str | int | None) -> None:
+        if operation_mode:
+            if not isinstance(operation_mode, int):
+                operation_mode = self._operation_mode_translate(operation_mode)
+            await self.async_set_operation_mode(operation_mode)
+        else:
+            raise FGLairGeneralException("operation_mode cannot be None!")
 
     # Class properties:
 
-    @property
-    def dsn(self):
+    def get_dsn(self) -> str:
         return self._dsn
 
-    def _get_prop_from_json(
-        self, propertyName: str, properties: Any
-    ) -> dict[str, Any] | None:
-        data = {}
-        for property in properties:
-            if property["property"]["name"] == propertyName:
-                data = {
-                    "value": property["property"]["value"],
-                    "key": property["property"]["key"],
-                }
-        return data
-
-    @property
-    def operation_mode(self):
+    def get_operation_mode(self) -> dict[str, int]:
         return self._operation_mode
 
-    @property
-    def operation_mode_desc(self) -> Any:
-        return self._operation_mode_translate(self.operation_mode["value"])
+    def get_operation_mode_desc(self) -> Any:
+        return self._operation_mode_translate(self.get_operation_mode()["value"])
 
-    @operation_mode.setter  # type: ignore
-    def operation_mode(self, properties) -> None:
+    async def async_set_operation_mode(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._operation_mode = self._get_prop_from_json(
-                "operation_mode", properties
-            )
+            self._operation_mode = get_prop_from_json("operation_mode", properties)
         elif isinstance(properties, int):
-            self._api._set_device_property(self.operation_mode["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_operation_mode()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property  # property to get display temperature in degree C
-    def display_temperature_degree(self) -> float | None:
+    # property to get display temperature in degree Cs
+    async def async_set_display_temperature_degree(self) -> float | None:
         data = None
         if self._adjust_temperature is not None:
             adjustTemperatureValue = self._adjust_temperature["value"]
             if adjustTemperatureValue == 65535:
-                datapoints = self._get_device_property_history(
+                datapoints = await self._async_get_device_property_history(
                     self._adjust_temperature["key"]
                 )
                 # Get the latest setting other than invalid value
@@ -239,52 +268,54 @@ class SplitAC:
             data = round((adjustTemperatureValue / 10), 1)
         return data
 
-    @property  # property returns display temperature dict in 10 times of degree C
-    def display_temperature(self) -> dict[str, Any] | None:
+    # property returns display temperature dict in 10 times of degree C
+    def get_display_temperature(self) -> dict[str, int]:
         return self._display_temperature
 
-    @display_temperature.setter
-    def display_temperature(self, properties: Any):
+    async def async_set_display_temperature(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._display_temperature = self._get_prop_from_json(
+            self._display_temperature = get_prop_from_json(
                 "display_temperature", properties
             )
         elif isinstance(properties, int) or isinstance(properties, float):
-            self._api._set_device_property(self.display_temperature["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_display_temperature()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property  # property to get outdoor temperature in degree C
-    def outdoor_temperature_degree(self) -> float | None:
+    # property to get outdoor temperature in degree C
+    def get_outdoor_temperature_degree(self) -> float | None:
         data = None
         if self._outdoor_temperature is not None:
             data = round(((self._outdoor_temperature["value"] / 100 - 32) / 9 * 5), 1)
         return data
 
-    @property  # property returns outdoor temperature dict in 10 times of degree C
-    def outdoor_temperature(self) -> dict[str, Any] | None:
+    # property returns outdoor temperature dict in 10 times of degree C
+    def get_outdoor_temperature(self) -> dict[str, int]:
         return self._outdoor_temperature
 
-    @outdoor_temperature.setter
-    def outdoor_temperature(self, properties: Any):
+    async def async_set_outdoor_temperature(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._outdoor_temperature = self._get_prop_from_json(
+            self._outdoor_temperature = get_prop_from_json(
                 "outdoor_temperature", properties
             )
         elif isinstance(properties, int) or isinstance(properties, float):
-            self._api._set_device_property(self.outdoor_temperature["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_outdoor_temperature()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property  # property to get temperature in degree C
-    def adjust_temperature_degree(self) -> float | None:
+    # property to get temperature in degree C
+    async def async_get_adjust_temperature_degree(self) -> float | None:
         data = None
         if self._adjust_temperature is not None:
             adjustTemperatureValue = self._adjust_temperature["value"]
             if adjustTemperatureValue == 65535:
-                datapoints = self._get_device_property_history(
+                datapoints = await self._async_get_device_property_history(
                     self._adjust_temperature["key"]
                 )
                 # Get the latest setting other than invalid value
@@ -295,201 +326,201 @@ class SplitAC:
             data = round((adjustTemperatureValue / 10), 1)
         return data
 
-    @property  # property returns temperature dict in 10 times of degree C
-    def adjust_temperature(self):
+    # property returns temperature dict in 10 times of degree C
+    def get_adjust_temperature(self) -> dict[str, int]:
         return self._adjust_temperature
 
-    @adjust_temperature.setter
-    def adjust_temperature(self, properties):
+    async def async_set_adjust_temperature(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._adjust_temperature = self._get_prop_from_json(
+            self._adjust_temperature = get_prop_from_json(
                 "adjust_temperature", properties
             )
         elif isinstance(properties, int) or isinstance(properties, float):
-            self._api._set_device_property(self.adjust_temperature["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_adjust_temperature()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def outdoor_low_noise(self):
+    def get_outdoor_low_noise(self) -> dict[str, bool]:
         return self._outdoor_low_noise
 
-    @outdoor_low_noise.setter
-    def outdoor_low_noise(self, properties):
+    async def async_set_outdoor_low_noise(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._outdoor_low_noise = self._get_prop_from_json(
+            self._outdoor_low_noise = get_prop_from_json(
                 "outdoor_low_noise", properties
             )
         elif isinstance(properties, int):
-            self._api._set_device_property(self.outdoor_low_noise["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_outdoor_low_noise()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def powerful_mode(self):
+    def get_powerful_mode(self) -> dict[str, bool]:
         return self._powerful_mode
 
-    @powerful_mode.setter
-    def powerful_mode(self, properties):
+    async def async_set_powerful_mode(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._powerful_mode = self._get_prop_from_json("powerful_mode", properties)
+            self._powerful_mode = get_prop_from_json("powerful_mode", properties)
         elif isinstance(properties, int):
-            self._api._set_device_property(self.powerful_mode["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_powerful_mode()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def fan_speed(self):
+    def get_properties(self) -> Any:
+        return self._properties
+
+    def set_properties(self, properties: Any) -> None:
+        self._properties = properties
+
+    def get_fan_speed(self) -> dict[str, int]:
         return self._fan_speed
 
-    @fan_speed.setter
-    def fan_speed(self, properties):
+    async def async_set_fan_speed(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._fan_speed = self._get_prop_from_json("fan_speed", properties)
+            self._fan_speed = get_prop_from_json("fan_speed", properties)
         elif isinstance(properties, int):
-            self._api._set_device_property(self.fan_speed["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_fan_speed()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def min_heat(self):
+    def get_min_heat(self) -> dict[str, bool]:
         return self._min_heat
 
-    @min_heat.setter
-    def min_heat(self, properties):
+    async def async_set_min_heat(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._min_heat = self._get_prop_from_json("min_heat", properties)
+            self._min_heat = get_prop_from_json("min_heat", properties)
         elif isinstance(properties, int):
-            self._api._set_device_property(self.min_heat["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_min_heat()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def economy_mode(self):
+    def get_economy_mode(self) -> dict[str, bool]:
         return self._economy_mode
 
-    @economy_mode.setter
-    def economy_mode(self, properties):
+    async def async_set_economy_mode(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._economy_mode = self._get_prop_from_json("economy_mode", properties)
+            self._economy_mode = get_prop_from_json("economy_mode", properties)
         elif isinstance(properties, int):
-            self._api._set_device_property(self.economy_mode["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_economy_mode()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def af_horizontal_num_dir(self) -> int | None:
+    def get_af_horizontal_num_dir(self) -> dict[str, int]:
         return self._af_horizontal_num_dir
 
-    @af_horizontal_num_dir.setter
-    def af_horizontal_num_dir(self, properties) -> int | None:
-        self._af_horizontal_num_dir = self._get_prop_from_json(
+    def set_af_horizontal_num_dir(self, properties: Any) -> None:
+        self._af_horizontal_num_dir = get_prop_from_json(
             "af_horizontal_num_dir", properties
         )
 
-    @property
-    def af_horizontal_direction(self):
+    def get_af_horizontal_direction(self) -> dict[str, int]:
         return self._af_horizontal_direction
 
-    @af_horizontal_direction.setter
-    def af_horizontal_direction(self, properties):
+    async def async_set_af_horizontal_direction(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._af_horizontal_direction = self._get_prop_from_json(
+            self._af_horizontal_direction = get_prop_from_json(
                 "af_horizontal_direction", properties
             )
         elif isinstance(properties, int):
-            self._api._set_device_property(
-                self.af_horizontal_direction["key"], properties
+            await self._client.async_set_device_property(
+                self.get_af_horizontal_direction()["key"], properties
             )
-            self.horizontal_swing_off()  # If direction set then swing will be turned OFF
-            self.refresh_properties()
+            await self.async_horizontal_swing_off()  # If direction set then swing will be turned OFF
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method or direction out of range!")
+            raise FGLairMethodException(
+                "Wrong usage of the method or direction out of range!"
+            )
 
-    @property
-    def af_horizontal_swing(self):
+    def get_af_horizontal_swing(self) -> dict[str, bool]:
         return self._af_horizontal_swing
 
-    @af_horizontal_swing.setter
-    def af_horizontal_swing(self, properties: Any):
+    async def async_set_af_horizontal_swing(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._af_horizontal_swing = self._get_prop_from_json(
+            self._af_horizontal_swing = get_prop_from_json(
                 "af_horizontal_swing", properties
             )
         elif isinstance(properties, int):
-            self._api._set_device_property(self.af_horizontal_swing["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_af_horizontal_swing()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def af_vertical_num_dir(self) -> int | None:
+    def get_af_vertical_num_dir(self) -> dict[str, int]:
         return self._af_vertical_num_dir
 
-    @af_vertical_num_dir.setter
-    def af_vertical_num_dir(self, properties) -> int | None:
-        self._af_vertical_num_dir = self._get_prop_from_json(
+    def set_af_vertical_num_dir(self, properties: Any) -> None:
+        self._af_vertical_num_dir = get_prop_from_json(
             "af_vertical_num_dir", properties
         )
 
-    @property
-    def af_vertical_direction(self):
+    def get_af_vertical_direction(self) -> dict[str, int]:
         return self._af_vertical_direction
 
-    @af_vertical_direction.setter
-    def af_vertical_direction(self, properties: Any) -> None:
+    async def async_set_af_vertical_direction(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._af_vertical_direction = self._get_prop_from_json(
+            self._af_vertical_direction = get_prop_from_json(
                 "af_vertical_direction", properties
             )
         elif isinstance(properties, int):
-            self._api._set_device_property(
-                self.af_vertical_direction["key"], properties
+            await self._client.async_set_device_property(
+                self.get_af_vertical_direction()["key"], properties
             )
-            self.vertical_swing_off()  ##If direction set then swing will be turned OFF
-            self.refresh_properties()
+            await self.async_vertical_swing_off()  ##If direction set then swing will be turned OFF
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method or direction out of range!")
+            raise FGLairMethodException(
+                "Wrong usage of the method or direction out of range!"
+            )
 
-    @property
-    def af_vertical_swing(self) -> Any:
+    def get_af_vertical_swing(self) -> dict[str, bool]:
         return self._af_vertical_swing
 
-    @af_vertical_swing.setter
-    def af_vertical_swing(self, properties: Any) -> None:
+    async def async_set_af_vertical_swing(self, properties: Any) -> None:
         if isinstance(properties, (list, tuple)):
-            self._af_vertical_swing = self._get_prop_from_json(
+            self._af_vertical_swing = get_prop_from_json(
                 "af_vertical_swing", properties
             )
         elif isinstance(properties, int):
-            self._api._set_device_property(self.af_vertical_swing["key"], properties)
-            self.refresh_properties()
+            await self._client.async_set_device_property(
+                self.get_af_vertical_swing()["key"], properties
+            )
+            await self.async_update_properties()
         else:
-            raise Exception("Wrong usage of the method!")
+            raise FGLairMethodException("Wrong usage of the method!")
 
-    @property
-    def device_name(self) -> dict[str, Any] | None:
+    def get_device_name(self) -> dict[str, str]:
         return self._device_name
 
-    @device_name.setter
-    def device_name(self, properties: Any) -> None:
-        self._device_name = self._get_prop_from_json("device_name", properties)
+    def set_device_name(self, properties: Any) -> None:
+        self._device_name = get_prop_from_json("device_name", properties)
 
-    @property
-    def op_status(self) -> dict[str, Any] | None:
-        return self._get_prop_from_json("op_status", self._properties)
+    def get_op_status(self) -> dict[str, int]:
+        return get_prop_from_json("op_status", self.get_properties())
 
     def get_op_status_desc(self) -> str | None:
         data = None
-        if self.op_status is not None:
+        if self.get_op_status() is not None:
             DICT_OP_MODE = {0: "Normal", 16777216: "Defrost"}
-            status = self.op_status["value"]
+            status = self.get_op_status()["value"]
             data = (
                 DICT_OP_MODE[status] if status in DICT_OP_MODE else f"Unknown {status}"
             )
@@ -497,14 +528,12 @@ class SplitAC:
         return data
 
     # Get a property history
-    def _get_device_property_history(self, propertyCode: int) -> Any:
-        propertyHistory = self._api._get_device_property(propertyCode)
-        propertyHistory = propertyHistory.json()
-
-        return propertyHistory
+    async def _async_get_device_property_history(self, property_code: int) -> Any:
+        property_history = await self._client.async_get_device_property(property_code)
+        return property_history
 
     # Translate the operation mode to descriptive values and reverse
-    def _operation_mode_translate(self, operation_mode: Any) -> Any:
+    def _operation_mode_translate(self, operation_mode: str | int) -> Any:
         DICT_OPERATION_MODE = {
             "off": 0,
             "unknown": 1,
