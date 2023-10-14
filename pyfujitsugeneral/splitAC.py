@@ -80,75 +80,81 @@ class SplitAC:
     # Find the last not 'OFF'/'0' O.M.
     # Turn on by setting O.M. to the last O.M
     async def async_turnOn(self) -> None:
+        # Turning on the AC based on the last known operation mode
         datapoints = await self._async_get_device_property_history(
             self.get_operation_mode()["key"]
         )
-        # Get the latest setting before turn off
+        last_operation_mode = 0
         for datapoint in reversed(datapoints):
             if datapoint["datapoint"]["value"] != 0:
                 last_operation_mode = int(datapoint["datapoint"]["value"])
                 break
-
         await self.async_set_operation_mode(last_operation_mode)
         await self.async_update_properties()
 
     async def async_turnOff(self) -> None:
+        # Turning off the AC
         await self.async_set_operation_mode(0)
         await self.async_update_properties()
 
-    # Economy mode setting
     async def async_economy_mode_on(self) -> None:
+        # Turning on economy mode
         await self.async_set_economy_mode(1)
 
     async def async_economy_mode_off(self) -> None:
+        # Turning off economy mode
         await self.async_set_economy_mode(0)
 
-    # Powerfull mode setting
-    async def async_powerfull_mode_on(self) -> None:
+    async def async_powerful_mode_on(self) -> None:
+        # Turning on powerful mode
         await self.async_set_powerful_mode(1)
 
-    async def async_powerfull_mode_off(self) -> None:
+    async def async_powerful_mode_off(self) -> None:
+        # Turning off powerful mode
         await self.async_set_powerful_mode(0)
 
     # Fan speed setting
     # Quiet Low Medium High Auto
     async def async_changeFanSpeed(self, speed: str) -> None:
+        # Changing the fan speed
         if speed.upper() == "QUIET":
             await self.async_fan_speed_quiet()
-            return None
-        if speed.upper() == "LOW":
+        elif speed.upper() == "LOW":
             await self.async_fan_speed_low()
-            return None
-        if speed.upper() == "MEDIUM":
+        elif speed.upper() == "MEDIUM":
             await self.async_fan_speed_medium()
-            return None
-        if speed.upper() == "HIGH":
+        elif speed.upper() == "HIGH":
             await self.async_fan_speed_high()
-            return None
-        if speed.upper() == "AUTO":
+        elif speed.upper() == "AUTO":
             await self.async_fan_speed_auto()
-            return None
 
     async def async_fan_speed_quiet(self) -> None:
+        # Setting the fan speed to Quiet
         await self.async_set_fan_speed(0)
 
     async def async_fan_speed_low(self) -> None:
+        # Setting the fan speed to Low
         await self.async_set_fan_speed(1)
 
     async def async_fan_speed_medium(self) -> None:
+        # Setting the fan speed to Medium
         await self.async_set_fan_speed(2)
 
     async def async_fan_speed_high(self) -> None:
+        # Setting the fan speed to High
         await self.async_set_fan_speed(3)
 
     async def async_fan_speed_auto(self) -> None:
+        # Setting the fan speed to Auto
         await self.async_set_fan_speed(4)
 
     def get_fan_speed_desc(self) -> str:
+        # Getting the description of the fan speed
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
         return FAN_SPEED_DICT[self.get_fan_speed()["value"]]
 
     def get_swing_modes_supported(self) -> str:
+        # Getting supported swing modes
         SWING_DICT = {0: "None", 1: "Vertical", 2: "Horizontal", 3: "Both"}
         key = 0
         if self.get_af_vertical_direction()["value"] is not None:
@@ -159,23 +165,25 @@ class SplitAC:
 
     # Vertical
     async def async_vertical_swing_on(self) -> None:
+        # Turning on vertical swing
         await self.async_set_af_vertical_swing(1)
 
     async def async_vertical_swing_off(self) -> None:
+        # Turning off vertical swing
         await self.async_set_af_vertical_swing(0)
 
-    def vane_vertical_positions(self) -> list[str]:
-        """Return available vertical vane positions."""
+    def vane_vertical_positions(self) -> list[int]:
+        # Getting vertical vane positions
         array = np.arange(1, self.get_af_vertical_num_dir()["value"] + 1)
         return list(array)
 
     def vane_vertical(self) -> int:
-        """Return vertical vane position."""
+        # Getting the current vertical vane position
         return self.get_af_vertical_direction()["value"]
 
     async def async_set_vane_vertical_position(self, pos: int) -> None:
-        """Set vertical vane position."""
-        if pos >= 1 and pos <= self.get_af_vertical_num_dir()["value"]:
+        # Setting the vertical vane position
+        if 1 <= pos <= self.get_af_vertical_num_dir()["value"]:
             await self.async_set_af_vertical_swing(0)
             await self.async_set_af_vertical_direction(pos)
         else:
@@ -183,46 +191,52 @@ class SplitAC:
 
     # Horizontal
     async def async_horizontal_swing_on(self) -> None:
+        # Turning on horizontal swing
         await self.async_set_af_horizontal_swing(1)
 
     async def async_horizontal_swing_off(self) -> None:
+        # Turning off horizontal swing
         await self.async_set_af_horizontal_swing(0)
 
-    def vane_horizontal_positions(self) -> list[str]:
-        """Return available horizontal vane positions."""
+    def vane_horizontal_positions(self) -> list[int]:
+        # Getting horizontal vane positions
         array = np.arange(1, self.get_af_horizontal_num_dir()["value"] + 1)
         return list(array)
 
     def vane_horizontal(self) -> int:
-        """Return horizontal vane position."""
+        # Getting the current horizontal vane position
         return self.get_af_horizontal_direction()["value"]
 
     async def async_set_vane_horizontal_position(self, pos: int) -> None:
-        """Set horizontal vane position."""
-        if pos >= 1 and pos <= self.get_af_horizontal_num_dir()["value"]:
+        # Setting the horizontal vane position
+        if 1 <= pos <= self.get_af_horizontal_num_dir()["value"]:
             await self.async_set_af_horizontal_swing(0)
             await self.async_set_af_horizontal_direction(pos)
         else:
             raise FGLairGeneralException("Vane position not supported")
 
     # Temperature setting
-    async def async_changeTemperature(self, newTemperature: int | float) -> None:
-        # set temperature for degree C
-        if not isinstance(newTemperature, int) and not isinstance(
-            newTemperature, float
+    async def async_change_temperature(self, new_temperature: int | float) -> None:
+        # Set temperature for degree C
+        if not isinstance(new_temperature, int) and not isinstance(
+            new_temperature, float
         ):
             raise FGLairMethodException("Wrong usage of method")
+
         # Fixing temps if not given as multiplies of 10 less than 160
-        if newTemperature < 160:
-            newTemperature = newTemperature * 10
-        if newTemperature >= 160 and newTemperature <= 320:
-            await self.async_set_adjust_temperature(newTemperature)
+        if new_temperature < 160:
+            new_temperature = int(new_temperature * 10)
+
+        if 160 <= new_temperature <= 320:
+            await self.async_set_adjust_temperature(new_temperature)
         else:
-            raise FGLairGeneralException("temperature out of range!")
+            raise FGLairGeneralException("Temperature out of range!")
 
     # Operation Mode setting
-    async def async_changeOperationMode(self, operation_mode: str | int | None) -> None:
-        if operation_mode:
+    async def async_change_operation_mode(
+        self, operation_mode: str | int | None
+    ) -> None:
+        if operation_mode is not None:
             if not isinstance(operation_mode, int):
                 operation_mode = self._operation_mode_translate(operation_mode)
             await self.async_set_operation_mode(operation_mode)
@@ -251,21 +265,21 @@ class SplitAC:
         else:
             raise FGLairMethodException("Wrong usage of the method!")
 
-    # property to get display temperature in degree Cs
+    # property to get display temperature in degree C
     async def async_set_display_temperature_degree(self) -> float | None:
         data = None
         if self._adjust_temperature is not None:
-            adjustTemperatureValue = self._adjust_temperature["value"]
-            if adjustTemperatureValue == 65535:
+            adjust_temperature_value = self._adjust_temperature["value"]
+            if adjust_temperature_value == 65535:
                 datapoints = await self._async_get_device_property_history(
                     self._adjust_temperature["key"]
                 )
                 # Get the latest setting other than invalid value
                 for datapoint in reversed(datapoints):
                     if datapoint["datapoint"]["value"] != 65535:
-                        adjustTemperatureValue = int(datapoint["datapoint"]["value"])
+                        adjust_temperature_value = int(datapoint["datapoint"]["value"])
                         break
-            data = round((adjustTemperatureValue / 10), 1)
+            data = round((adjust_temperature_value / 10), 1)
         return data
 
     # property returns display temperature dict in 10 times of degree C
@@ -313,17 +327,17 @@ class SplitAC:
     async def async_get_adjust_temperature_degree(self) -> float | None:
         data = None
         if self._adjust_temperature is not None:
-            adjustTemperatureValue = self._adjust_temperature["value"]
-            if adjustTemperatureValue == 65535:
+            adjust_temperature_value = self._adjust_temperature["value"]
+            if adjust_temperature_value == 65535:
                 datapoints = await self._async_get_device_property_history(
                     self._adjust_temperature["key"]
                 )
-                # Get the latest setting other than invalid value
+                # Ottieni l'ultima impostazione diversa dal valore non valido
                 for datapoint in reversed(datapoints):
                     if datapoint["datapoint"]["value"] != 65535:
-                        adjustTemperatureValue = int(datapoint["datapoint"]["value"])
+                        adjust_temperature_value = int(datapoint["datapoint"]["value"])
                         break
-            data = round((adjustTemperatureValue / 10), 1)
+            data = round((adjust_temperature_value / 10), 1)
         return data
 
     # property returns temperature dict in 10 times of degree C
