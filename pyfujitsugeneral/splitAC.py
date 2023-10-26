@@ -280,7 +280,7 @@ class SplitAC:
                         display_temperature_value = int(datapoint["datapoint"]["value"])
                         break
             data = round(((display_temperature_value / 100 - 32) / 9 * 5), 1)
-        return data
+        return data - self._temperature_offset
 
     # property returns display temperature dict in 10 times of degree C
     def get_display_temperature(self) -> dict[str, int]:
