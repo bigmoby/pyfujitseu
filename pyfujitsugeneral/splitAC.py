@@ -266,20 +266,22 @@ class SplitAC:
             raise FGLairMethodException("Wrong usage of the method!")
 
     # property to get display temperature in degree C
-    async def async_set_display_temperature_degree(self) -> float | None:
+    async def async_get_display_temperature_degree(self) -> float | None:
         data = None
-        if self._adjust_temperature is not None:
-            adjust_temperature_value = self._adjust_temperature["value"]
-            if adjust_temperature_value == 65535:
+        if self._display_temperature is not None:
+            display_temperature_value_value = self._display_temperature["value"]
+            if display_temperature_value_value == 65535:
                 datapoints = await self._async_get_device_property_history(
-                    self._adjust_temperature["key"]
+                    self._display_temperature["key"]
                 )
                 # Get the latest setting other than invalid value
                 for datapoint in reversed(datapoints):
                     if datapoint["datapoint"]["value"] != 65535:
-                        adjust_temperature_value = int(datapoint["datapoint"]["value"])
+                        display_temperature_value_value = int(
+                            datapoint["datapoint"]["value"]
+                        )
                         break
-            data = round((adjust_temperature_value / 10), 1)
+            data = round((display_temperature_value_value / 10), 1)
         return data
 
     # property returns display temperature dict in 10 times of degree C
