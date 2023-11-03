@@ -116,7 +116,9 @@ class FGLairApiClient:
             access_token = await self.async_authenticate()
 
         response = await self.api_wrapper(
-            "get", self._API_SET_PROPERTIES_URL.format(property=property_code)
+            "get",
+            self._API_SET_PROPERTIES_URL.format(property=property_code),
+            access_token=access_token,
         )
 
         return response.json()
