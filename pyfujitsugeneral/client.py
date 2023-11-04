@@ -121,7 +121,7 @@ class FGLairApiClient:
             access_token=access_token,
         )
 
-        return response.json()
+        return response
 
     async def async_get_device_properties(self, dsn: str) -> Any:
         access_token = await self._async_read_token()
