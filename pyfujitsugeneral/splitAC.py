@@ -11,14 +11,19 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_prop_from_json(property_name: str, properties: Any) -> dict[str, Any]:
-    data = {}
     for property_item in properties:
         if property_item["property"]["name"] == property_name:
-            data = {
+            if property_name == "refresh":
+                return {
+                    "value": property_item["property"]["value"],
+                    "key": property_item["property"]["key"],
+                    "data_updated_at": property_item["property"]["data_updated_at"],
+                }
+            return {
                 "value": property_item["property"]["value"],
                 "key": property_item["property"]["key"],
             }
-    return data
+    return {}
 
 
 class SplitAC:
