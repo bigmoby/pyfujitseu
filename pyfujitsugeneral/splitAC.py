@@ -46,6 +46,7 @@ class SplitAC:
         self._powerful_mode: dict[str, bool] = {}
         self._min_heat: dict[str, bool] = {}
         self._outdoor_low_noise: dict[str, bool] = {}
+        self._refresh: dict[str, int] = {}
         self._operation_mode: dict[str, int] = {}
         self._adjust_temperature: dict[str, int] = {}
         self._display_temperature: dict[str, int] = {}
@@ -70,6 +71,7 @@ class SplitAC:
         await self.async_set_powerful_mode(self.get_properties())
         await self.async_set_min_heat(self.get_properties())
         await self.async_set_outdoor_low_noise(self.get_properties())
+        await self.async_set_refresh(self.get_properties())
         await self.async_set_operation_mode(self.get_properties())
         await self.async_set_adjust_temperature(self.get_properties())
         await self.async_set_display_temperature(self.get_properties())
@@ -247,6 +249,21 @@ class SplitAC:
 
     def get_dsn(self) -> str:
         return self._dsn
+
+    def get_refresh(self) -> dict[str, int]:
+        return self._refresh
+
+    async def async_set_refresh(self, properties: Any) -> None:
+        # Sending an asynchronous refresh display_temperature request
+        if isinstance(properties, (list, tuple)):
+            self._refresh = get_prop_from_json("refresh", properties)
+        elif isinstance(properties, int):
+            # no update properties process will be invoked after that
+            await self._client.async_set_device_property(
+                self.get_refresh()["key"], properties
+            )
+        else:
+            raise FGLairMethodException("Wrong usage of the method!")
 
     def get_operation_mode(self) -> dict[str, int]:
         return self._operation_mode
