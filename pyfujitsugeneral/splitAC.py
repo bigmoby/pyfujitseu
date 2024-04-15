@@ -156,9 +156,23 @@ class SplitAC:
         await self.async_set_fan_speed(4)
 
     def get_fan_speed_desc(self) -> str:
-        # Getting the description of the fan speed
+        """Getting the description of the fan speed
+
+        The supported fan speeds vary from device to device. The available modes are
+        read from the Device capability attributes.
+
+        """
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
-        return FAN_SPEED_DICT[self.get_fan_speed()["value"]]
+
+        fan_speed = self.get_fan_speed()["value"]
+        if fan_speed == 9:
+            """For very few AC the resulting value is 9 BUT this value "9" is a not documented value,
+            I assume it arbitrarily (sigh!) as the High value.
+            Is it a bullshit?! ...oh, yes it's!
+            """
+            return FAN_SPEED_DICT[3]
+
+        return FAN_SPEED_DICT[fan_speed]
 
     def get_swing_modes_supported(self) -> str:
         # Getting supported swing modes
