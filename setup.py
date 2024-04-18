@@ -22,5 +22,5 @@ setup(
     packages=["pyfujitsugeneral"],
     include_package_data=True,
     install_requires=["requests", "certifi", "chardet", "idna", "urllib3", "numpy"],
-    python_requires=">=3.12",
+    python_requires=">=3.11",
 )
