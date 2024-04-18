@@ -25,13 +25,15 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.x'
+        python-version: '3.12'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build
-    - name: Build package
-      run: python -m build
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Build a binary wheel and a source tarball
+      run: python -m build --sdist --wheel --outdir dist/
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
