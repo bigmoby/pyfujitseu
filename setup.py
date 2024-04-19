@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = "2.0.14"
+__version__ = "2.0.16"
 
 setup(
     name="pyfujitsugeneral",
@@ -22,5 +22,5 @@ setup(
     packages=["pyfujitsugeneral"],
     include_package_data=True,
     install_requires=["requests", "certifi", "chardet", "idna", "urllib3", "numpy"],
-    python_requires=">=3.11",
+    python_requires=">=3.10",
 )
