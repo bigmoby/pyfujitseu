@@ -167,10 +167,17 @@ class SplitAC:
         fan_speed = self.get_fan_speed()["value"]
         if fan_speed == 9:
             """For very few AC the resulting value is 9 BUT this value "9" is a not documented value,
-            I assume it arbitrarily (sigh!) as the High value.
-            Is it a bullshit?! ...oh, yes it's!
+            I assume it as the Auto value according:
+            https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L210
             """
-            return FAN_SPEED_DICT[3]
+            return FAN_SPEED_DICT[4]
+
+        if fan_speed == 5:
+            """For very few AC the resulting value is 5 BUT this value "5" is a not documented value,
+            I assume it as the Low value according:
+            https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L198
+            """
+            return FAN_SPEED_DICT[1]
 
         return FAN_SPEED_DICT[fan_speed]
 
