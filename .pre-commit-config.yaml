@@ -1,20 +1,32 @@
+default_language_version:
+  python: python3.12
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
-  hooks:
-    - id: check-yaml
-      args: ["--unsafe"]
-    - id: end-of-file-fixer
-    - id: trailing-whitespace
--   repo: https://github.com/psf/black
-    rev: 22.10.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.5
     hooks:
-    -   id: black
-- repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.9.0
-  hooks:
-    - id: mypy
-      exclude: ^tests/
-      args: [--strict]
-      language: python
-      language_version: python3.12
+      - id: ruff
+        args:
+          - --fix
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/psf/black
+    rev: 23.10.1
+    hooks:
+      - id: black
+        args:
+          - --line-length=88
+          - --preview
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        args: [--strict]
+        language: python
+        language_version: python3.12
+        additional_dependencies:
+          - "pydantic>=1.10.12"

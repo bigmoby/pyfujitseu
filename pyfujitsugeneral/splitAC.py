@@ -1,11 +1,18 @@
-from typing import Any
+"""Library interface for Fujitsu General AC."""
 
 import logging
+from typing import Any
+
 import numpy as np
 
 from .client import FGLairApiClient
-from .exceptions import FGLairMethodException, FGLairGeneralException
-
+from .exceptions import (
+    FGLairMethodException,
+    FGLairMethodOrDirectionOutOfRangeException,
+    FGLairOperationModeNoneException,
+    FGLairTemperatureOutOfRangeException,
+    FGLairVanePositionNotSupportedException,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -156,7 +163,7 @@ class SplitAC:
         await self.async_set_fan_speed(4)
 
     def get_fan_speed_desc(self) -> str:
-        """Getting the description of the fan speed
+        """Get the description of the fan speed.
 
         The supported fan speeds vary from device to device. The available modes are
         read from the Device capability attributes.
@@ -165,19 +172,26 @@ class SplitAC:
         FAN_SPEED_DICT = {0: "Quiet", 1: "Low", 2: "Medium", 3: "High", 4: "Auto"}
 
         fan_speed = self.get_fan_speed()["value"]
-        if fan_speed == 9:
-            """For very few AC the resulting value is 9 BUT this value "9" is a not documented value,
-            I assume it as the Auto value according:
-            https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L210
-            """
-            return FAN_SPEED_DICT[4]
-
         if fan_speed == 5:
             """For very few AC the resulting value is 5 BUT this value "5" is a not documented value,
             I assume it as the Low value according:
             https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L198
             """
             return FAN_SPEED_DICT[1]
+
+        if fan_speed == 7:
+            """For very few AC the resulting value is 7 BUT this value "7" is a not documented value,
+            I assume it as the High value according:
+            https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L204
+            """
+            return FAN_SPEED_DICT[3]
+
+        if fan_speed == 9:
+            """For very few AC the resulting value is 9 BUT this value "9" is a not documented value,
+            I assume it as the Auto value according:
+            https://github.com/deiger/AirCon/blob/master/devicetypes/deiger/hisense-air-conditioner.src/hisense-air-conditioner.groovy#L210
+            """
+            return FAN_SPEED_DICT[4]
 
         return FAN_SPEED_DICT[fan_speed]
 
@@ -215,7 +229,7 @@ class SplitAC:
             await self.async_set_af_vertical_swing(0)
             await self.async_set_af_vertical_direction(pos)
         else:
-            raise FGLairGeneralException("Vane position not supported")
+            raise FGLairVanePositionNotSupportedException
 
     # Horizontal
     async def async_horizontal_swing_on(self) -> None:
@@ -241,7 +255,7 @@ class SplitAC:
             await self.async_set_af_horizontal_swing(0)
             await self.async_set_af_horizontal_direction(pos)
         else:
-            raise FGLairGeneralException("Vane position not supported")
+            raise FGLairVanePositionNotSupportedException
 
     # Temperature setting
     async def async_change_temperature(self, new_temperature: int | float) -> None:
@@ -249,7 +263,7 @@ class SplitAC:
         if not isinstance(new_temperature, int) and not isinstance(
             new_temperature, float
         ):
-            raise FGLairMethodException("Wrong usage of method")
+            raise FGLairMethodException
 
         # Fixing temps if not given as multiplies of 10 less than 160
         if new_temperature < 160:
@@ -258,7 +272,7 @@ class SplitAC:
         if 160 <= new_temperature <= 320:
             await self.async_set_adjust_temperature(new_temperature)
         else:
-            raise FGLairGeneralException("Temperature out of range!")
+            raise FGLairTemperatureOutOfRangeException
 
     # Operation Mode setting
     async def async_change_operation_mode(
@@ -269,7 +283,7 @@ class SplitAC:
                 operation_mode = self._operation_mode_translate(operation_mode)
             await self.async_set_operation_mode(operation_mode)
         else:
-            raise FGLairGeneralException("operation_mode cannot be None!")
+            raise FGLairOperationModeNoneException
 
     # Class properties:
 
@@ -289,7 +303,7 @@ class SplitAC:
                 self.get_refresh()["key"], properties
             )
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_operation_mode(self) -> dict[str, int]:
         return self._operation_mode
@@ -306,7 +320,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     # property to get display temperature in degree C
     async def async_get_display_temperature_degree(self) -> float | None:
@@ -334,13 +348,13 @@ class SplitAC:
             self._display_temperature = get_prop_from_json(
                 "display_temperature", properties
             )
-        elif isinstance(properties, int) or isinstance(properties, float):
+        elif isinstance(properties, float | int):
             await self._client.async_set_device_property(
                 self.get_display_temperature()["key"], properties
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     # property to get outdoor temperature in degree C
     def get_outdoor_temperature_degree(self) -> float | None:
@@ -358,13 +372,13 @@ class SplitAC:
             self._outdoor_temperature = get_prop_from_json(
                 "outdoor_temperature", properties
             )
-        elif isinstance(properties, int) or isinstance(properties, float):
+        elif isinstance(properties, float | int):
             await self._client.async_set_device_property(
                 self.get_outdoor_temperature()["key"], properties
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     # property to get temperature in degree C
     async def async_get_adjust_temperature_degree(self) -> float | None:
@@ -392,13 +406,13 @@ class SplitAC:
             self._adjust_temperature = get_prop_from_json(
                 "adjust_temperature", properties
             )
-        elif isinstance(properties, int) or isinstance(properties, float):
+        elif isinstance(properties, float | int):
             await self._client.async_set_device_property(
                 self.get_adjust_temperature()["key"], properties
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_outdoor_low_noise(self) -> dict[str, bool]:
         return self._outdoor_low_noise
@@ -414,7 +428,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_powerful_mode(self) -> dict[str, bool]:
         return self._powerful_mode
@@ -428,7 +442,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_properties(self) -> Any:
         return self._properties
@@ -448,7 +462,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_min_heat(self) -> dict[str, bool]:
         return self._min_heat
@@ -462,7 +476,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_economy_mode(self) -> dict[str, bool]:
         return self._economy_mode
@@ -476,7 +490,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_af_horizontal_num_dir(self) -> dict[str, int]:
         return self._af_horizontal_num_dir
@@ -501,9 +515,7 @@ class SplitAC:
             await self.async_horizontal_swing_off()  # If direction set then swing will be turned OFF
             await self.async_update_properties()
         else:
-            raise FGLairMethodException(
-                "Wrong usage of the method or direction out of range!"
-            )
+            raise FGLairMethodOrDirectionOutOfRangeException
 
     def get_af_horizontal_swing(self) -> dict[str, bool]:
         return self._af_horizontal_swing
@@ -519,7 +531,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_af_vertical_num_dir(self) -> dict[str, int]:
         return self._af_vertical_num_dir
@@ -544,9 +556,7 @@ class SplitAC:
             await self.async_vertical_swing_off()  ##If direction set then swing will be turned OFF
             await self.async_update_properties()
         else:
-            raise FGLairMethodException(
-                "Wrong usage of the method or direction out of range!"
-            )
+            raise FGLairMethodOrDirectionOutOfRangeException
 
     def get_af_vertical_swing(self) -> dict[str, bool]:
         return self._af_vertical_swing
@@ -562,7 +572,7 @@ class SplitAC:
             )
             await self.async_update_properties()
         else:
-            raise FGLairMethodException("Wrong usage of the method!")
+            raise FGLairMethodException
 
     def get_device_name(self) -> dict[str, str]:
         return self._device_name
@@ -578,9 +588,7 @@ class SplitAC:
         if self.get_op_status() is not None:
             DICT_OP_MODE = {0: "Normal", 16777216: "Defrost"}
             status = self.get_op_status()["value"]
-            data = (
-                DICT_OP_MODE[status] if status in DICT_OP_MODE else f"Unknown {status}"
-            )
+            data = DICT_OP_MODE.get(status, f"Unknown {status}")
             return data
         return data
 

@@ -1,13 +1,13 @@
 """Fujitsu General API Client."""
+
 import asyncio
-import logging
-import socket
-import os
 import json
+import logging
+import os
+import socket
 from typing import Any
 
 import aiohttp
-import async_timeout
 
 from .exceptions import FGLairGeneralException
 from .utils import isBlank
@@ -58,7 +58,12 @@ class FGLairApiClient:
             )
             API_BASE_URL = "https://ads-field.ayla.com.cn/apiv1/"
         else:
-            self._SIGNIN_BODY = '{\r\n    "user": {\r\n        "email": "%s",\r\n        "application": {\r\n            "app_id": "CJIOSP-id",\r\n            "app_secret": "CJIOSP-Vb8MQL_lFiYQ7DKjN0eCFXznKZE"\r\n        },\r\n        "password": "%s"\r\n    }\r\n}'
+            self._SIGNIN_BODY = (
+                '{\r\n    "user": {\r\n        "email": "%s",\r\n        "application":'
+                ' {\r\n            "app_id": "CJIOSP-id",\r\n            "app_secret":'
+                ' "CJIOSP-Vb8MQL_lFiYQ7DKjN0eCFXznKZE"\r\n        },\r\n       '
+                ' "password": "%s"\r\n    }\r\n}'
+            )
             self._API_GET_ACCESS_TOKEN_URL = (
                 "https://user-field.aylanetworks.com/users/sign_in.json"
             )
@@ -79,7 +84,7 @@ class FGLairApiClient:
             os.path.exists(access_token_file)
             and os.stat(access_token_file).st_size != 0
         ):
-            f = open(access_token_file, "r", encoding="utf-8")
+            f = open(access_token_file, encoding="utf-8")
             access_token_file_content = f.read()
 
             # now = int(time.time())
@@ -89,8 +94,7 @@ class FGLairApiClient:
             # expires_in = access_token_file_content.json()['expires_in']
             # auth_time = int(access_token_file_content.json()['time'])
             return access_token
-        else:
-            return await self.async_authenticate()
+        return await self.async_authenticate()
 
     async def _async_get_devices(self, access_token: str | None = None) -> Any:
         token_valid = await self._async_check_token_validity(access_token)
@@ -104,9 +108,8 @@ class FGLairApiClient:
 
     async def async_get_devices_dsn(self) -> list[str]:
         devices = await self._async_get_devices()
-        devices_dsn: list[str] = []
-        for device in devices:
-            devices_dsn.append(device["device"]["dsn"])
+        devices_dsn: list[str] = [device["device"]["dsn"] for device in devices]
+
         return devices_dsn
 
     async def async_get_device_property(self, property_code: int) -> Any:
@@ -160,10 +163,7 @@ class FGLairApiClient:
             response = await self.api_wrapper(
                 method="get", url=self._API_GET_DEVICES_URL, access_token=access_token
             )
-            if not response:
-                return True
-            else:
-                return False
+            return bool(not response)
         except FGLairGeneralException:
             return False
 
@@ -199,40 +199,40 @@ class FGLairApiClient:
                 headers = api_headers(access_token=access_token)
             loop = asyncio.get_event_loop()
             now = loop.time()
-            async with async_timeout.timeout(now + TIMEOUT):
+            async with asyncio.timeout(now + TIMEOUT):
                 if method == "get":
                     response = await self._session.get(url, headers=headers)
                     json_response = await response.json()
                     return json_response
 
-                elif method == "post":
+                if method == "post":
                     response = await self._session.post(
                         url, headers=headers, data=json_data
                     )
                     json_response = await response.json()
                     return json_response
 
-        except asyncio.TimeoutError as exception:
+        except TimeoutError as exception:
             _LOGGER.error(
                 "Timeout error fetching information from %s - %s",
                 url,
                 exception,
             )
-            raise FGLairGeneralException() from exception
+            raise FGLairGeneralException from exception
         except (KeyError, TypeError) as exception:
             _LOGGER.error(
                 "Error parsing information from %s - %s",
                 url,
                 exception,
             )
-            raise FGLairGeneralException() from exception
+            raise FGLairGeneralException from exception
         except (aiohttp.ClientError, socket.gaierror) as exception:
             _LOGGER.error(
                 "Error fetching information from %s - %s",
                 url,
                 exception,
             )
-            raise FGLairGeneralException() from exception
+            raise FGLairGeneralException from exception
         except Exception as exception:  # pylint: disable=broad-except
             _LOGGER.error("Something really wrong happened! - %s", exception)
-            raise FGLairGeneralException() from exception
+            raise FGLairGeneralException from exception
