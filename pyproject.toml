@@ -9,7 +9,7 @@ license     = {text = "MIT License"}
 description = "Python Library for interacting with Fujitsu General split air conditioners API"
 readme      = "README.md"
 authors     = [
-    {name = "Fabio Mauro, Mehdi Modarressi", email = ""}
+    {name = "Fabio Mauro, Mehdi Modarressi", email = "bigmoby.pymeianlike@gmail.com"}
 ]
 keywords    = ["Fujitsu General air conditioners"]
 classifiers = [
