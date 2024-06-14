@@ -1,5 +1,6 @@
 """Fujitsu General API Client."""
 
+import aiofiles
 import asyncio
 import json
 import logging
@@ -84,8 +85,8 @@ class FGLairApiClient:
             os.path.exists(access_token_file)
             and os.stat(access_token_file).st_size != 0
         ):
-            f = open(access_token_file, encoding="utf-8")
-            access_token_file_content = f.read()
+            async with aiofiles.open(access_token_file, encoding="utf-8") as f:
+                access_token_file_content = await f.read()
 
             # now = int(time.time())
 
@@ -178,7 +179,7 @@ class FGLairApiClient:
         # refresh_token = response.json()['refresh_token']
         # expires_in = response.json()['expires_in']
 
-        with open(self._ACCESS_TOKEN_FILE, "w", encoding="utf-8") as f:
+        async with aiofiles.open(self._ACCESS_TOKEN_FILE, "w", encoding="utf-8") as f:
             json.dump(response, f)
 
         self._ACCESS_TOKEN_STR = access_token
