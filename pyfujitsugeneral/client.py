@@ -3,11 +3,11 @@
 import asyncio
 import json
 import logging
-import aiofiles
 import os
 import socket
 from typing import Any
 
+import aiofiles
 import aiohttp
 
 from .exceptions import FGLairGeneralException
@@ -77,7 +77,7 @@ class FGLairApiClient:
         self._API_GET_DEVICES_URL = API_BASE_URL + "devices.json"
         self._ACCESS_TOKEN_FILE = tokenpath
         self._ACCESS_TOKEN_STR = None
-    
+
     async def _async_read_token(self, access_token_file: str = "") -> str:
         if isBlank(access_token_file):
             access_token_file = self._ACCESS_TOKEN_FILE
@@ -85,7 +85,9 @@ class FGLairApiClient:
             os.path.exists(access_token_file)
             and os.stat(access_token_file).st_size != 0
         ):
-            async with aiofiles.open(access_token_file, mode='r', encoding='utf-8') as f:
+            async with aiofiles.open(
+                access_token_file, mode="r", encoding="utf-8"
+            ) as f:
                 access_token_file_content = await f.read()
 
             access_token: str = json.loads(access_token_file_content)["access_token"]
@@ -177,7 +179,9 @@ class FGLairApiClient:
         # refresh_token = response.json()['refresh_token']
         # expires_in = response.json()['expires_in']
 
-        with open(self._ACCESS_TOKEN_FILE, "w", encoding="utf-8") as f:
+        async with aiofiles.open(
+            self._ACCESS_TOKEN_FILE, mode="w", encoding="utf-8"
+        ) as f:
             json.dump(response, f)
 
         self._ACCESS_TOKEN_STR = access_token

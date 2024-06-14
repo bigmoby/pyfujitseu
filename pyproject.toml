@@ -707,6 +707,7 @@ max-complexity = 25
 [tool.mypy]
 python_version = 3.12
 plugins = "pydantic.mypy"
+namespace_packages = true
 pretty = true
 show_error_codes = true
 follow_imports = "silent"
@@ -733,6 +734,7 @@ warn_unreachable = true
 
 [[tool.mypy.overrides]]
 module = "pyfujitsugeneral.*"
+ignore_errors = false
 check_untyped_defs = false
 disallow_incomplete_defs = false
 disallow_subclassing_any = false
