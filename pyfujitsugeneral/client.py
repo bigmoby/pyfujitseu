@@ -182,7 +182,7 @@ class FGLairApiClient:
         async with aiofiles.open(
             self._ACCESS_TOKEN_FILE, mode="w", encoding="utf-8"
         ) as f:
-            await asyncio.get_event_loop().run_in_executor(None, json.dump(response, f))
+            await asyncio.get_event_loop().run_in_executor(None, json.dump, response, f)
 
         self._ACCESS_TOKEN_STR = access_token
 
