@@ -98,7 +98,7 @@ class SplitAC:
         datapoints = await self._async_get_device_property_history(
             self.get_operation_mode()["key"]
         )
-        last_operation_mode = 0
+        last_operation_mode = self._operation_mode_translate("auto")
         for datapoint in reversed(datapoints):
             if datapoint["datapoint"]["value"] != 0:
                 last_operation_mode = int(datapoint["datapoint"]["value"])
