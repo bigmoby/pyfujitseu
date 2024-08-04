@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def get_prop_from_json(property_name: str, properties: Any) -> dict[str, Any]:
     for property_item in properties:
-        if not isinstance(property_item, dict)
+        if not isinstance(property_item, dict):
             return {}
         if property_item["property"]["name"] == property_name:
             if property_name == "refresh":
