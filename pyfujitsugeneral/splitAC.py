@@ -1,7 +1,7 @@
 """Library interface for Fujitsu General AC."""
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
@@ -216,14 +216,35 @@ class SplitAC:
         # Turning off vertical swing
         await self.async_set_af_vertical_swing(0)
 
-    def vane_vertical_positions(self) -> list[int]:
-        # Getting vertical vane positions
-        array = np.arange(1, self.get_af_vertical_num_dir()["value"] + 1)
+    def vane_vertical_positions(self) -> Optional[list[int]]:
+        """Get the vertical vane positions as a list of integers."""
+        # Safely getting the number of vertical vane positions
+        vertical_num_dir = self.get_af_vertical_num_dir()
+
+        # Check if the dictionary is empty or the key "value" is missing or invalid
+        num_positions = vertical_num_dir.get("value")
+
+        if not isinstance(num_positions, int) or num_positions <= 0:
+            _LOGGER.error(
+                "Invalid or missing 'value' in get_af_vertical_num_dir response: %s",
+                vertical_num_dir,
+            )
+            return None  # Return None to indicate the error condition
+
+        array = np.arange(1, num_positions + 1)
         return list(array)
 
     def vane_vertical(self) -> int:
-        # Getting the current vertical vane position
-        return self.get_af_vertical_direction()["value"]
+        try:
+            # Getting the current vertical vane position
+            vertical_direction = self.get_af_vertical_direction()
+        except Exception:
+            return -1  # Return a default error value
+
+        if isinstance(vertical_direction, dict) and "value" in vertical_direction:
+            return vertical_direction["value"]
+        # Invalid data format or 'value' key not found
+        return -1  # Return a default error
 
     async def async_set_vane_vertical_position(self, pos: int) -> None:
         # Setting the vertical vane position
@@ -326,8 +347,10 @@ class SplitAC:
 
     # property to get display temperature in degree C
     async def async_get_display_temperature_degree(self) -> float | None:
-        data = None
-        if self._display_temperature is not None:
+        if (
+            isinstance(self._display_temperature, dict)
+            and "value" in self._display_temperature
+        ):
             display_temperature_value = self._display_temperature["value"]
             if display_temperature_value == 65535:
                 datapoints = await self._async_get_device_property_history(
@@ -339,7 +362,8 @@ class SplitAC:
                         display_temperature_value = int(datapoint["datapoint"]["value"])
                         break
             data = round(((display_temperature_value / 100 - 32) / 9 * 5), 1)
-        return data - self._temperature_offset
+            return data - self._temperature_offset
+        return None
 
     # property returns display temperature dict in 10 times of degree C
     def get_display_temperature(self) -> dict[str, int]:
