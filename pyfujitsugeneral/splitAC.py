@@ -201,9 +201,11 @@ class SplitAC:
         # Getting supported swing modes
         SWING_DICT = {0: "None", 1: "Vertical", 2: "Horizontal", 3: "Both"}
         key = 0
-        if self.get_af_vertical_direction()["value"] is not None:
+        vertical_direction = self.get_af_vertical_direction()
+        if vertical_direction.get("value") is not None:
             key = key | 1
-        if self.get_af_horizontal_direction()["value"] is not None:
+        horizontal_direction = self.get_af_horizontal_direction()
+        if horizontal_direction.get("value") is not None:
             key = key | 2
         return SWING_DICT[key]
 
