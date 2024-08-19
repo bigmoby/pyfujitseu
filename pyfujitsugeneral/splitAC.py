@@ -5,8 +5,8 @@ from typing import Any, Optional
 
 import numpy as np
 
-from .client import FGLairApiClient
-from .exceptions import (
+from pyfujitsugeneral.client import FGLairApiClient
+from pyfujitsugeneral.exceptions import (
     FGLairMethodException,
     FGLairMethodOrDirectionOutOfRangeException,
     FGLairOperationModeNoneException,

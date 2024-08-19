@@ -10,8 +10,8 @@ from typing import Any
 import aiofiles
 import aiohttp
 
-from .exceptions import FGLairGeneralException
-from .utils import isBlank
+from pyfujitsugeneral.exceptions import FGLairGeneralException
+from pyfujitsugeneral.utils import isBlank
 
 TIMEOUT = 10
 
