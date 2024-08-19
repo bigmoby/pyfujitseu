@@ -263,9 +263,15 @@ class SplitAC:
         # Turning off horizontal swing
         await self.async_set_af_horizontal_swing(0)
 
-    def vane_horizontal_positions(self) -> list[int]:
+    def vane_horizontal_positions(self) -> list[int] | None:
         # Getting horizontal vane positions
-        array = np.arange(1, self.get_af_horizontal_num_dir()["value"] + 1)
+        result = self.get_af_horizontal_num_dir()
+        value = result.get("value")
+
+        if value is None:
+            return None
+
+        array = np.arange(1, value + 1)
         return list(array)
 
     def vane_horizontal(self) -> int:
