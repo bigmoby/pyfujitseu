@@ -369,7 +369,7 @@ class SplitAC:
                     if datapoint["datapoint"]["value"] != 65535:
                         display_temperature_value = int(datapoint["datapoint"]["value"])
                         break
-            data = round(((display_temperature_value / 100 - 32) / 9 * 5), 1)
+            data = round((display_temperature_value - 5000) / 100, 1)
             return data - self._temperature_offset
         return None
 
@@ -394,7 +394,7 @@ class SplitAC:
     def get_outdoor_temperature_degree(self) -> float | None:
         data = None
         if self._outdoor_temperature is not None:
-            data = round(((self._outdoor_temperature["value"] / 100 - 32) / 9 * 5), 1)
+            data = round((self._outdoor_temperature["value"] - 5000) / 100, 1)
         return data
 
     # property returns outdoor temperature dict in 10 times of degree C
