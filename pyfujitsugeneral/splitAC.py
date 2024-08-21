@@ -129,6 +129,14 @@ class SplitAC:
         # Turning off powerful mode
         await self.async_set_powerful_mode(0)
 
+    async def async_min_heat_mode_on(self) -> None:
+        # Turning on min_heat mode
+        await self.async_set_min_heat(1)
+
+    async def async_min_heat_mode_off(self) -> None:
+        # Turning off min_heat mode
+        await self.async_set_min_heat(0)
+
     # Fan speed setting
     # Quiet Low Medium High Auto
     async def async_changeFanSpeed(self, speed: str) -> None:
