@@ -1,7 +1,7 @@
 """Library interface for Fujitsu General AC."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -226,7 +226,7 @@ class SplitAC:
         # Turning off vertical swing
         await self.async_set_af_vertical_swing(0)
 
-    def vane_vertical_positions(self) -> Optional[list[int]]:
+    def vane_vertical_positions(self) -> list[int]:
         """Get the vertical vane positions as a list of integers."""
         # Safely getting the number of vertical vane positions
         vertical_num_dir = self.get_af_vertical_num_dir()
@@ -239,7 +239,9 @@ class SplitAC:
                 "Invalid or missing 'value' in get_af_vertical_num_dir response: %s",
                 vertical_num_dir,
             )
-            return None  # Return None to indicate the error condition
+            return (
+                []
+            )  # Return an empty list instead of None to indicate the error condition
 
         array = np.arange(1, num_positions + 1)
         return list(array)
@@ -273,13 +275,20 @@ class SplitAC:
         # Turning off horizontal swing
         await self.async_set_af_horizontal_swing(0)
 
-    def vane_horizontal_positions(self) -> list[int] | None:
-        # Getting horizontal vane positions
+    def vane_horizontal_positions(self) -> list[int]:
+        """Get the horizontal vane positions as a list of integers."""
+        # Safely getting the number of horizontal vane positions
         result = self.get_af_horizontal_num_dir()
+
+        # Check if the dictionary is empty or the key "value" is missing or invalid
         value = result.get("value")
 
-        if value is None:
-            return None
+        if not isinstance(value, int) or value <= 0:
+            _LOGGER.error(
+                "Invalid or missing 'value' in get_af_horizontal_num_dir response: %s",
+                result,
+            )
+            return []  # Return an empty list instead of None
 
         array = np.arange(1, value + 1)
         return list(array)
@@ -554,7 +563,9 @@ class SplitAC:
             await self._client.async_set_device_property(
                 self.get_af_horizontal_direction()["key"], properties
             )
-            await self.async_horizontal_swing_off()  # If direction set then swing will be turned OFF
+            await (
+                self.async_horizontal_swing_off()
+            )  # If direction set then swing will be turned OFF
             await self.async_update_properties()
         else:
             raise FGLairMethodOrDirectionOutOfRangeException
@@ -595,7 +606,9 @@ class SplitAC:
             await self._client.async_set_device_property(
                 self.get_af_vertical_direction()["key"], properties
             )
-            await self.async_vertical_swing_off()  ##If direction set then swing will be turned OFF
+            await (
+                self.async_vertical_swing_off()
+            )  ##If direction set then swing will be turned OFF
             await self.async_update_properties()
         else:
             raise FGLairMethodOrDirectionOutOfRangeException

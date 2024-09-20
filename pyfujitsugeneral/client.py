@@ -85,9 +85,7 @@ class FGLairApiClient:
             os.path.exists(access_token_file)
             and os.stat(access_token_file).st_size != 0
         ):
-            async with aiofiles.open(
-                access_token_file, mode="r", encoding="utf-8"
-            ) as f:
+            async with aiofiles.open(access_token_file, encoding="utf-8") as f:
                 access_token_file_content = await f.read()
 
             access_token: str = json.loads(access_token_file_content)["access_token"]
