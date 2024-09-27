@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 
 from pyfujitsugeneral.client import FGLairApiClient
+from pyfujitsugeneral.const import DEVICE_CAPABILITIES, Capability
 from pyfujitsugeneral.exceptions import (
     FGLairMethodException,
     FGLairMethodOrDirectionOutOfRangeException,
@@ -15,6 +16,8 @@ from pyfujitsugeneral.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+CAPABILITY_NOT_AVAILABLE = "65535"
 
 
 def get_prop_from_json(property_name: str, properties: Any) -> dict[str, Any]:
@@ -49,6 +52,7 @@ class SplitAC:
         self._temperature_offset = temperature_offset
         self.set_properties(None)
         self._device_name: dict[str, str] = {}
+        self._device_capability: dict[str, str] = {}
         self._af_vertical_swing: dict[str, bool] = {}
         self._af_vertical_direction: dict[str, int] = {}
         self._af_vertical_num_dir: dict[str, int] = {}
@@ -74,6 +78,7 @@ class SplitAC:
     async def async_update_properties(self) -> Any:
         self.set_properties(await self._client.async_get_device_properties(self._dsn))
         self.set_device_name(self.get_properties())
+        self.set_device_capability(self.get_properties())
         await self.async_set_af_vertical_swing(self.get_properties())
         await self.async_set_af_vertical_direction(self.get_properties())
         self.set_af_vertical_num_dir(self.get_properties())
@@ -234,7 +239,7 @@ class SplitAC:
         # Check if the dictionary is empty or the key "value" is missing or invalid
         num_positions = vertical_num_dir.get("value")
 
-        if not isinstance(num_positions, int) or num_positions <= 0:
+        if not isinstance(num_positions, int) or num_positions < 0:
             _LOGGER.error(
                 "Invalid or missing 'value' in get_af_vertical_num_dir response: %s",
                 vertical_num_dir,
@@ -275,6 +280,32 @@ class SplitAC:
         # Turning off horizontal swing
         await self.async_set_af_horizontal_swing(0)
 
+    def capabilities(self) -> dict[str, bool]:
+        active_capabilities: dict[str, bool] = {}
+
+        device_state = self.get_device_capability().get("value")
+
+        if not isinstance(device_state, int) or device_state <= 0:
+            _LOGGER.error(
+                "Invalid or missing 'value' in _device_capability response: %s",
+                self._device_capability,
+            )
+            return active_capabilities
+
+        for capability in Capability:
+            # Check if the capability is active in the device state
+            if device_state & capability:
+                active_capabilities[capability.name] = True
+            else:
+                active_capabilities[capability.name] = False
+
+        return active_capabilities
+
+    def has_capability(self, capability: Capability) -> bool:
+        all_capabilities: dict[str, bool] = self.capabilities()
+
+        return all_capabilities.get(capability.name, False)
+
     def vane_horizontal_positions(self) -> list[int]:
         """Get the horizontal vane positions as a list of integers."""
         # Safely getting the number of horizontal vane positions
@@ -283,7 +314,7 @@ class SplitAC:
         # Check if the dictionary is empty or the key "value" is missing or invalid
         value = result.get("value")
 
-        if not isinstance(value, int) or value <= 0:
+        if not isinstance(value, int) or value < 0:
             _LOGGER.error(
                 "Invalid or missing 'value' in get_af_horizontal_num_dir response: %s",
                 result,
@@ -646,6 +677,12 @@ class SplitAC:
             data = DICT_OP_MODE.get(status, f"Unknown {status}")
             return data
         return data
+
+    def set_device_capability(self, properties: Any) -> None:
+        self._device_capability = get_prop_from_json(DEVICE_CAPABILITIES, properties)
+
+    def get_device_capability(self) -> dict[str, str]:
+        return self._device_capability
 
     # Get a property history
     async def _async_get_device_property_history(self, property_code: int) -> Any:
