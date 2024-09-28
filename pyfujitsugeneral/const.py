@@ -1,9 +1,11 @@
 """Constants for FGLair Home Assistant Integration."""
 
-
 from enum import IntEnum, unique
 
 DEVICE_CAPABILITIES = "device_capabilities"
+
+CAPABILITY_NOT_AVAILABLE: int = 65535
+
 
 @unique
 class Capability(IntEnum):
@@ -27,4 +29,3 @@ class Capability(IntEnum):
     OUTDOOR_LOW_NOISE = 1 << 17
     SWING_VERTICAL = 1 << 10
     SWING_HORIZONTAL = 1 << 11
-

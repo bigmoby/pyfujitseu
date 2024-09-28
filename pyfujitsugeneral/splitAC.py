@@ -6,7 +6,11 @@ from typing import Any
 import numpy as np
 
 from pyfujitsugeneral.client import FGLairApiClient
-from pyfujitsugeneral.const import DEVICE_CAPABILITIES, Capability
+from pyfujitsugeneral.const import (
+    CAPABILITY_NOT_AVAILABLE,
+    DEVICE_CAPABILITIES,
+    Capability,
+)
 from pyfujitsugeneral.exceptions import (
     FGLairMethodException,
     FGLairMethodOrDirectionOutOfRangeException,
@@ -16,8 +20,6 @@ from pyfujitsugeneral.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-CAPABILITY_NOT_AVAILABLE = "65535"
 
 
 def get_prop_from_json(property_name: str, properties: Any) -> dict[str, Any]:
@@ -408,13 +410,13 @@ class SplitAC:
             and "value" in self._display_temperature
         ):
             display_temperature_value = self._display_temperature["value"]
-            if display_temperature_value == 65535:
+            if display_temperature_value == CAPABILITY_NOT_AVAILABLE:
                 datapoints = await self._async_get_device_property_history(
                     self._display_temperature["key"]
                 )
                 # Get the latest setting other than invalid value
                 for datapoint in reversed(datapoints):
-                    if datapoint["datapoint"]["value"] != 65535:
+                    if datapoint["datapoint"]["value"] != CAPABILITY_NOT_AVAILABLE:
                         display_temperature_value = int(datapoint["datapoint"]["value"])
                         break
             data = round((display_temperature_value - 5000) / 100, 1)
@@ -464,20 +466,26 @@ class SplitAC:
 
     # property to get temperature in degree C
     async def async_get_adjust_temperature_degree(self) -> float | None:
-        data = None
-        if self._adjust_temperature is not None:
-            adjust_temperature_value = self._adjust_temperature["value"]
-            if adjust_temperature_value == 65535:
-                datapoints = await self._async_get_device_property_history(
-                    self._adjust_temperature["key"]
-                )
-                # Ottieni l'ultima impostazione diversa dal valore non valido
-                for datapoint in reversed(datapoints):
-                    if datapoint["datapoint"]["value"] != 65535:
-                        adjust_temperature_value = int(datapoint["datapoint"]["value"])
-                        break
-            data = round((adjust_temperature_value / 10), 1)
-        return data
+        if self._adjust_temperature is None:
+            return None
+
+        adjust_temperature_value: int = self._adjust_temperature["value"]
+
+        if adjust_temperature_value == CAPABILITY_NOT_AVAILABLE:
+            datapoints = await self._async_get_device_property_history(
+                self._adjust_temperature["key"]
+            )
+
+            # Ottieni l'ultima impostazione diversa dal valore non valido
+            for datapoint in reversed(datapoints):
+                value = int(datapoint["datapoint"]["value"])
+                if value != CAPABILITY_NOT_AVAILABLE:
+                    adjust_temperature_value = value
+                    break
+            else:
+                return None
+
+        return round(adjust_temperature_value / 10, 1)
 
     # property returns temperature dict in 10 times of degree C
     def get_adjust_temperature(self) -> dict[str, int]:
